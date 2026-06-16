@@ -27,6 +27,14 @@ audio{accent-color:#25d366;max-width:100%}
 <body>
 <div id="app"></div>
 <script type="module">
+// Global error boundary
+window.addEventListener("unhandledrejection", e => {
+  const msg = e.reason?.message || String(e.reason);
+  if(msg.includes("Firebase config not set") || msg.includes("initializeApp")) return;
+  console.error("ChatSphere error:", e.reason);
+});
+</script>
+<script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getAuth,GoogleAuthProvider,signInWithPopup,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import{getFirestore,collection,doc,setDoc,addDoc,updateDoc,getDoc,onSnapshot,query,where,orderBy,limit,serverTimestamp,arrayUnion,arrayRemove,deleteDoc,getDocs}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -46,11 +54,62 @@ const firebaseConfig={
 
 };
 // 🔴 YOUR EMAIL = ADMIN (gets 👑 badge + admin panel + location tracking)
-const ADMIN_EMAIL="varcascasvar@gmail.com";
+const ADMIN_EMAIL="varcasecasvar@gmail.com";
 // ══════════════════════════════════════════════════════
 
-const fa=initializeApp(firebaseConfig);
-const auth=getAuth(fa),db=getFirestore(fa),storage=getStorage(fa),gp=new GoogleAuthProvider();
+// ── Config validator ──────────────────────────────────────
+const CONFIG_MISSING = Object.values(firebaseConfig).some(v=>v.startsWith("YOUR_")) || ADMIN_EMAIL.startsWith("YOUR_");
+if(CONFIG_MISSING){
+  document.getElementById("app").innerHTML=`
+  <div style="min-height:100vh;background:#0a0f1e;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;padding:20px">
+    <div style="background:#111827;border:1px solid #1e2d45;border-radius:20px;padding:40px 32px;max-width:520px;width:100%">
+      <div style="font-size:48px;text-align:center;margin-bottom:16px">⚙️</div>
+      <h2 style="color:#e8edf5;text-align:center;margin:0 0 8px;font-size:22px">Setup Required</h2>
+      <p style="color:#6b7a99;text-align:center;margin:0 0 28px;font-size:14px;line-height:1.6">Open this HTML file in a text editor and paste your Firebase config</p>
+      <div style="background:#1a2235;border-radius:12px;padding:16px;margin-bottom:20px;font-family:monospace;font-size:12px;color:#25d366;line-height:1.8">
+        <div style="color:#6b7a99;margin-bottom:8px">// 🔴 Replace these values:</div>
+        <div>apiKey: <span style="color:#f59e0b">"AIzaSy..."</span></div>
+        <div>authDomain: <span style="color:#f59e0b">"yourapp.firebaseapp.com"</span></div>
+        <div>projectId: <span style="color:#f59e0b">"yourapp"</span></div>
+        <div>storageBucket: <span style="color:#f59e0b">"yourapp.appspot.com"</span></div>
+        <div>messagingSenderId: <span style="color:#f59e0b">"123456789"</span></div>
+        <div>appId: <span style="color:#f59e0b">"1:123:web:abc"</span></div>
+        <div style="margin-top:8px">ADMIN_EMAIL: <span style="color:#f59e0b">"you@gmail.com"</span></div>
+      </div>
+      <div style="background:#25d36615;border:1px solid #25d36640;border-radius:10px;padding:14px;font-size:13px;color:#25d366;line-height:1.7">
+        <strong>Where to get your config:</strong><br>
+        1. Go to <a href="https://console.firebase.google.com" target="_blank" style="color:#25d366">console.firebase.google.com</a><br>
+        2. Open your project → ⚙️ Project Settings<br>
+        3. Scroll to <strong>Your apps</strong> → click <strong>&lt;/&gt;</strong><br>
+        4. Copy the <code>firebaseConfig</code> object<br>
+        5. Paste it into this file replacing the placeholder values
+      </div>
+    </div>
+  </div>`;
+  throw new Error("Firebase config not set");
+}
+
+let fa, auth, db, storage, gp;
+try {
+  fa=initializeApp(firebaseConfig);
+  auth=getAuth(fa);db=getFirestore(fa);storage=getStorage(fa);gp=new GoogleAuthProvider();
+} catch(initErr) {
+  document.getElementById("app").innerHTML=`
+  <div style="min-height:100vh;background:#0a0f1e;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;padding:20px">
+    <div style="background:#111827;border:1px solid #ef444440;border-radius:20px;padding:40px 32px;max-width:500px;width:100%;text-align:center">
+      <div style="font-size:48px;margin-bottom:16px">❌</div>
+      <h2 style="color:#ef4444;margin:0 0 12px">Firebase Error</h2>
+      <p style="color:#6b7a99;font-size:14px;line-height:1.6;margin:0 0 16px">${initErr.message}</p>
+      <div style="background:#1a2235;border-radius:10px;padding:14px;font-size:13px;color:#6b7a99;text-align:left;line-height:1.7">
+        ✅ Check that your <strong style="color:#e8edf5">apiKey</strong> is correct<br>
+        ✅ Check that <strong style="color:#e8edf5">authDomain</strong> matches your project<br>
+        ✅ Make sure Firebase Authentication is enabled<br>
+        ✅ Make sure Firestore Database is created
+      </div>
+    </div>
+  </div>`;
+  throw initErr;
+}
 
 /* ── Colors ── */
 const C={bg:"#0a0f1e",panel:"#111827",card:"#1a2235",border:"#1e2d45",
@@ -1007,7 +1066,7 @@ function render(){
 /* ══════════════════════════════════════════════
    BOOT
 ══════════════════════════════════════════════ */
-render();
+try { render(); } catch(e) { console.error("Render error:", e); }
 onAuthStateChanged(auth,async u=>{
   S.loading=false;
   if(u){S.user=u;subChats(u.uid);subContacts(u.uid);subStatuses();goOnline();}
