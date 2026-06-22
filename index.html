@@ -5,949 +5,1226 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>ChatSphere</title>
 <meta name="theme-color" content="#25d366"/>
+
+<!-- Firebase Compat SDK — works on ALL hosts including GitHub Pages -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body,#app{height:100%;overflow:hidden;font-family:Inter,system-ui,sans-serif;background:#0a0f1e}
+html,body,#app{height:100%;font-family:Inter,system-ui,sans-serif;background:#0a0f1e;overflow:hidden}
 input,button,textarea{font-family:inherit}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-thumb{background:#1e2d45;border-radius:4px}
-audio{accent-color:#25d366}
-.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:center;justify-content:center}
-.modal-box{background:#111827;border:1px solid #1e2d45;border-radius:20px;padding:28px;width:90%;max-width:420px;max-height:90vh;overflow-y:auto}
-.btn-primary{padding:12px 20px;border:none;border-radius:10px;background:#25d366;color:#fff;font-weight:700;font-size:14px;cursor:pointer;width:100%}
-.btn-ghost{padding:10px 16px;border:1px solid #1e2d45;border-radius:10px;background:none;color:#6b7a99;font-size:13px;cursor:pointer}
-.inp{padding:12px 14px;border-radius:10px;border:1px solid #1e2d45;background:#1a2235;color:#e8edf5;font-size:14px;outline:none;width:100%}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#1e2d45;border-radius:4px}
+audio{accent-color:#25d366;max-width:100%}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px}
+.box{background:#111827;border:1px solid #1e2d45;border-radius:20px;padding:28px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;position:relative}
+.lbl{color:#6b7a99;font-size:11px;font-weight:700;letter-spacing:.5px;margin-bottom:5px;display:block}
+.inp{padding:11px 14px;border-radius:10px;border:1px solid #1e2d45;background:#1a2235;color:#e8edf5;font-size:14px;outline:none;width:100%;display:block;margin-bottom:10px}
+.inp:focus{border-color:#25d366}
+.btn{padding:12px;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;width:100%;margin-top:8px;display:block}
+.btn-g{background:#25d366;color:#fff}
+.btn-r{background:#ef444415;color:#ef4444;border:1px solid #ef444430}
+.btn-b{background:#1a2235;color:#e8edf5;border:1px solid #1e2d45}
 </style>
 </head>
 <body>
-<div id="app"></div>
-<script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getAuth,GoogleAuthProvider,signInWithPopup,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged,updateProfile,updatePassword,EmailAuthProvider,reauthenticateWithCredential}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,collection,doc,setDoc,addDoc,updateDoc,getDoc,onSnapshot,query,where,orderBy,limit,serverTimestamp,arrayUnion,arrayRemove,deleteDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import{getStorage,ref as sRef,uploadBytesResumable,getDownloadURL}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+<div id="app">
+  <div style="height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0a0f1e;gap:14px">
+    <div style="font-size:60px">💬</div>
+    <div style="color:#25d366;font-size:22px;font-weight:800">ChatSphere</div>
+    <div style="color:#6b7a99;font-size:13px">Starting up…</div>
+    <div style="width:120px;height:3px;background:#1e2d45;border-radius:2px;overflow:hidden;margin-top:4px">
+      <div style="height:100%;width:40%;background:#25d366;border-radius:2px;animation:ld 1.2s ease-in-out infinite"></div>
+    </div>
+  </div>
+</div>
+<style>@keyframes ld{0%{margin-left:-40%}100%{margin-left:140%}}</style>
 
-// ══════════════════════════════════════════════
-//  🔴  PASTE YOUR FIREBASE CONFIG HERE
-// ══════════════════════════════════════════════
-const firebaseConfig={
-  apiKey:"AIzaSyCwwL-U23ByTCctGdUKVcj_dI-BcUeKasM",
-  authDomain:"my-lovely-76bc7.firebaseapp.com",
-  projectId:"my-lovely-76bc7",
-  storageBucket:"my-lovely-76bc7.firebasestorage.app",
-  messagingSenderId:"795101379825",
-  appId:"1:795101379825:web:c1dbe6ca753b4c1d5afd50",
-  measurementId:"G-H8E2GQQG4T",
+<script>
+// ─────────────────────────────────────────────────────
+//  Firebase Config — already filled in
+// ─────────────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyCwwL-U23ByTCctGdUKVcj_dI-BcUeKasM",
+  authDomain:        "my-lovely-76bc7.firebaseapp.com",
+  projectId:         "my-lovely-76bc7",
+  storageBucket:     "my-lovely-76bc7.firebasestorage.app",
+  messagingSenderId: "795101379825",
+  appId:             "1:795101379825:web:c1dbe6ca753b4c1d5afd50",
+  measurementId:     "G-H8E2GQQG4T"
 };
-// ══════════════════════════════════════════════
-
-// 🔴 SET YOUR EMAIL AS ADMIN
 const ADMIN_EMAIL = "varcascasvar@gmail.com";
+// ─────────────────────────────────────────────────────
 
-const fapp=initializeApp(firebaseConfig);
-const auth=getAuth(fapp);
-const db=getFirestore(fapp);
-const storage=getStorage(fapp);
-const gp=new GoogleAuthProvider();
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth    = firebase.auth();
+const db      = firebase.firestore();
+const storage = firebase.storage();
+const gp      = new firebase.auth.GoogleAuthProvider();
 
-/* ── Palette ── */
+/* ── Colors ── */
 const C={bg:"#0a0f1e",panel:"#111827",card:"#1a2235",border:"#1e2d45",
-  accent:"#25d366",dim:"#128c4a",blue:"#4f8ef7",red:"#ef4444",
+  accent:"#25d366",dim:"#128c4a",blue:"#4f8ef7",red:"#ef4444",yellow:"#f59e0b",
   text:"#e8edf5",muted:"#6b7a99",out:"#005c4b",inn:"#1a2235"};
-
-const AV_COLORS=["#4f8ef7","#a855f7","#f97316","#ec4899","#14b8a6","#f59e0b","#ef4444","#10b981"];
-const aColor=n=>AV_COLORS[(n||"A").charCodeAt(0)%AV_COLORS.length];
+const AVC=["#4f8ef7","#a855f7","#f97316","#ec4899","#14b8a6","#f59e0b","#ef4444","#10b981"];
+const aCol=n=>AVC[(n||"A").charCodeAt(0)%AVC.length];
 const ini=n=>(n||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
 const fmtT=ts=>{if(!ts)return"";const d=ts.toDate?ts.toDate():new Date(ts);return d.getHours()+":"+String(d.getMinutes()).padStart(2,"0");};
-const fmtD=ts=>{if(!ts)return"";const d=ts.toDate?ts.toDate():new Date(ts),now=new Date(),diff=(now-d)/86400000;if(diff<1)return fmtT(ts);if(diff<2)return"Yesterday";if(diff<7)return d.toLocaleDateString("en",{weekday:"short"});return d.toLocaleDateString("en",{day:"2-digit",month:"2-digit"});};
+const fmtD=ts=>{if(!ts)return"";const d=ts.toDate?ts.toDate():new Date(ts),now=new Date(),df=(now-d)/864e5;if(df<1)return fmtT(ts);if(df<2)return"Yesterday";if(df<7)return d.toLocaleDateString("en",{weekday:"short"});return d.toLocaleDateString("en",{day:"2-digit",month:"2-digit"});};
 const fmtB=b=>b<1024?b+"B":b<1048576?(b/1024).toFixed(1)+"KB":(b/1048576).toFixed(1)+"MB";
-const fIcon=t=>t?.startsWith("image/")?"🖼️":t?.startsWith("video/")?"🎬":t?.startsWith("audio/")?"🎙":t?.includes("pdf")?"📄":"📎";
+const fIcon=t=>t?.startsWith("image/")?"🖼️":t?.startsWith("video/")?"🎬":t?.startsWith("audio/")?"🎙":"📎";
 
-/* ── Chat background themes ── */
-const BG_THEMES=[
-  {id:"dark",   name:"Dark",      bg:"#0a0f1e", pattern:"none"},
-  {id:"dots",   name:"Dark Dots", bg:"#0a0f1e", pattern:"radial-gradient(#1e2d4544 1px,transparent 1px)"},
-  {id:"night",  name:"Night Blue",bg:"#040d21", pattern:"radial-gradient(#1a3a6044 1px,transparent 1px)"},
-  {id:"forest", name:"Forest",    bg:"#0a1a0f", pattern:"radial-gradient(#1a3a2244 1px,transparent 1px)"},
-  {id:"purple", name:"Purple",    bg:"#120a1e", pattern:"radial-gradient(#2a1a4044 1px,transparent 1px)"},
-  {id:"sunset", name:"Sunset",    bg:"#1a0f0a", pattern:"radial-gradient(#3a1a0a44 1px,transparent 1px)"},
-  {id:"ocean",  name:"Ocean",     bg:"#0a1520", pattern:"radial-gradient(#0a304044 1px,transparent 1px)"},
-  {id:"rose",   name:"Rose",      bg:"#1a0a0f", pattern:"radial-gradient(#3a0a2044 1px,transparent 1px)"},
-  {id:"plain",  name:"Plain",     bg:"#111827", pattern:"none"},
-  {id:"light",  name:"Light",     bg:"#f0f4f8", pattern:"none"},
+/* ── BG themes ── */
+const THEMES=[
+  {id:"default",name:"Default",bg:"#0a0f1e",pat:"radial-gradient(#1e2d4544 1px,transparent 1px)"},
+  {id:"night",name:"Night Blue",bg:"#040d21",pat:"radial-gradient(#1a3a6044 1px,transparent 1px)"},
+  {id:"forest",name:"Forest",bg:"#071a0a",pat:"radial-gradient(#1a3a2244 1px,transparent 1px)"},
+  {id:"purple",name:"Purple",bg:"#0e0820",pat:"radial-gradient(#2d1a5044 1px,transparent 1px)"},
+  {id:"ocean",name:"Ocean",bg:"#041520",pat:"radial-gradient(#0a304055 1px,transparent 1px)"},
+  {id:"sunset",name:"Sunset",bg:"#1a0a05",pat:"radial-gradient(#3a1a0a44 1px,transparent 1px)"},
+  {id:"rose",name:"Rose",bg:"#1a040e",pat:"radial-gradient(#3a0a2044 1px,transparent 1px)"},
+  {id:"slate",name:"Slate",bg:"#0f172a",pat:"radial-gradient(#1e293b55 1px,transparent 1px)"},
+  {id:"plain",name:"Plain Dark",bg:"#111827",pat:"none"},
+  {id:"light",name:"Light",bg:"#e8f5e9",pat:"radial-gradient(#25d36622 1px,transparent 1px)"},
 ];
 
-/* ── Emoji sets ── */
-const EMOJI_CATS=[
-  {name:"😀 Smileys", emojis:["😀","😁","😂","🤣","😃","😄","😅","😆","😉","😊","😋","😎","😍","🥰","😘","😗","😙","😚","🙂","🤗","🤩","🤔","🤨","😐","😑","😶","🙄","😏","😣","😥","😮","🤐","😯","😪","😫","🥱","😴","😌","😛","😜","😝","🤤","😒","😓","😔","😕","🙃","🤑","😲","☹️","🙁","😖","😞","😟","😤","😢","😭","😦","😧","😨","😩","🤯","😬","😰","😱","🥵","🥶","😳","🤪","😵","🥴","😠","😡","🤬","😷","🤒","🤕","🤢","🤮","🤧","😇","🥳","🥸","🤠","🤡","🤥","🤫","🤭","🧐","🤓","😈","👿","👹","👺","💀","☠️","👻","👽","👾","🤖"]},
-  {name:"👋 Gestures", emojis:["👋","🤚","🖐️","✋","🖖","👌","🤌","🤏","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","👐","🤲","🙏","✍️","💅","🤳","💪","🦵","🦶","👂","👃","🧠","🦷","👀","👁️","👅","👄","🫦","🦴","🤝","🫂"]},
-  {name:"❤️ Hearts", emojis:["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","♥️","❤️‍🔥","❤️‍🩹","💯","💢","💥","💫","💦","💨","🕳️","💬","💭","💤"]},
-  {name:"🎉 Activities", emojis:["🎉","🎊","🎈","🎁","🎀","🎗️","🎟️","🎫","🏆","🥇","🥈","🥉","🏅","🎖️","🎪","🎭","🎨","🎬","🎤","🎧","🎵","🎶","🎼","🎹","🎸","🎺","🎻","🥁","🎷","🪘","🎮","🕹️","🎲","♟️","🎯","🎳","🎰","🧩","🪅","🪆"]},
-  {name:"🐶 Animals", emojis:["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊","🐒","🐔","🐧","🐦","🐤","🦆","🦅","🦉","🦇","🐺","🐗","🐴","🦄","🐝","🐛","🦋","🐌","🐞","🐜","🪲","🦟","🦗","🕷️","🦂","🐢","🦎","🐍","🦕","🦖","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🦭","🐊","🐅","🐆","  ","🦍","🦧","🦣","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐈","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐁","🐀","🐿️","🦔"]},
-  {name:"🍕 Food", emojis:["🍕","🍔","🌮","🌯","🥗","🍜","🍝","🍛","🍣","🍱","🥟","🍤","🍙","🍚","🍘","🍥","🥮","🍢","🧆","🥚","🍳","🥞","🧇","🥓","🥩","🍗","🍖","🌭","🥪","🥙","🧀","🥗","🥘","🍲","🍛","🍜","🍝","🍠","🍢","🍣","🍤","🍥","🥮","🍡","🥟","🥠","🥡","🦀","🦞","🦐","🦑","🍦","🍧","🍨","🍩","🍪","🎂","🍰","🧁","🥧","🍫","🍬","🍭","🍮","🍯","🍼","🥛","☕","🍵","🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","🧊","🥄","🍴","🍽️"]},
-  {name:"✈️ Travel", emojis:["✈️","🚀","🛸","🚁","🛶","⛵","🚢","🚂","🚆","🚇","🚈","🚉","🚊","🚝","🚄","🚅","🚈","🚞","🚋","🚃","🚟","🚠","🚡","🚖","🚘","🚗","🚙","🛻","🚚","🚛","🚜","🏎️","🏍️","🛵","🛺","🚲","🛴","🛹","🛼","🚏","🛣️","🛤️","⛽","🚨","🚥","🚦","🛑","🚧","⚓","🪝","⛵","🛟","🚤","🛥️","🛳️","⛴️","🚢","✈️","🛩️","🛫","🛬","🪂","💺","🚁","🚟","🚠","🚡","🛰️","🚀","🛸","🌍","🌎","🌏","🗺️","🧭","🏔️","⛰️","🌋","🏕️","🏖️","🏜️","🏝️","🏞️","🏟️","🏛️"]},
-  {name:"💼 Objects", emojis:["💼","📱","💻","⌨️","🖥️","🖨️","🖱️","💾","💿","📀","📷","📸","📹","🎥","📽️","🎞️","📞","☎️","📟","📠","📺","📻","🎙️","🎚️","🎛️","🧭","⏱️","⏲️","⏰","🕰️","⌚","📡","🔋","🔌","💡","🔦","🕯️","🪔","🧯","💰","💴","💵","💶","💷","💸","💳","🪙","💹","📈","📉","📊","📋","📌","📍","📎","🖇️","📏","📐","✂️","🗃️","🗄️","🗑️","🔒","🔓","🔏","🔐","🔑","🗝️","🔨","🪓","⛏️","⚒️","🛠️","🗡️","⚔️","🛡️","🪚","🔧","🪛","🔩","⚙️","🗜️","⚖️","🦯","🔗","⛓️","🧰","🧲","🪜"]}
+/* ── Emoji categories ── */
+const ECAT=[
+  {ic:"😀",e:["😀","😁","😂","🤣","😃","😄","😅","😆","😉","😊","😋","😎","😍","🥰","😘","😗","😚","🙂","🤗","🤩","🤔","🤨","😐","😑","😶","🙄","😏","😒","😓","😔","😕","🙃","😲","☹️","😖","😞","😟","😤","😢","😭","😦","😧","😨","😩","🤯","😬","😰","😱","🥵","🥶","😳","🤪","😵","🥴","😠","😡","🤬","😷","🤒","🤕","🤢","🤮","🤧","😇","🥳","🥸","🤠","🤡","🤥","🤫","🤭","🧐","🤓","😈","👿","💀","👻","👽","🤖","💩","😺","😸","😹","😻","😼","😽","🙀","😿","😾"]},
+  {ic:"👋",e:["👋","🤚","🖐️","✋","🖖","👌","🤌","🤏","✌️","🤞","🤟","🤘","🤙","👈","👉","👆","🖕","👇","☝️","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐","🤲","🙏","✍️","💅","🤳","💪","🦵","🦶","👂","👃","👀","👁️","👅","👄","💋","👶","🧒","👦","👧","🧑","👱","👨","🧔","👩","🧓","👴","👵","🙍","🙎","🙅","🙆","💁","🙋","🧏","🙇","🤦","🤷","👮","🕵️","💂","🥷","👷","🤴","👸","👳","👲","🧕","🤵","👰","🤰","🤱","👼","🎅","🤶","🦸","🦹","🧙","🧚","🧛","🧜","🧝","💆","💇","🚶","🧍","🧎","🏃","💃","🕺","👫","👬","👭","👪"]},
+  {ic:"❤️",e:["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","♥️","❤️‍🔥","❤️‍🩹","💯","💢","💥","💫","💦","💨","💬","💭","💤","✨","🌟","⭐","🌈","🌊","🌸","🌺","🌻","🌹","🌷","🍀","🌴","🌵","🌾","🍁","🍂","🍃","🌍","🌎","🌏","🌕","🌙","⚡","❄️","☃️","🌈","☀️","⛅","🌧️"]},
+  {ic:"🎉",e:["🎉","🎊","🎈","🎁","🎀","🎗️","🏆","🥇","🥈","🥉","🎖️","🎪","🎭","🎨","🎬","🎤","🎧","🎵","🎶","🎼","🎹","🎸","🎺","🎻","🥁","🪘","🎮","🕹️","🎲","♟️","🎯","🎳","🎰","🧩","🪅","🪆"]},
+  {ic:"🐶",e:["🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊","🐔","🐧","🐦","🦆","🦅","🦉","🦇","🐺","🐗","🦄","🐝","🦋","🐌","🐞","🐜","🦟","🦗","🕷️","🦂","🐢","🦎","🐍","🦕","🦖","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🦭","🐊","🐅","🐆","🦓","🦍","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🦬","🐃","🐄","🐎","🐖","🐑","🐐","🦌","🐕","🐩","🦮","🐈","🐓","🦃","🦤","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦫","🦦","🦥","🐿️","🦔"]},
+  {ic:"🍕",e:["🍕","🍔","🌮","🌯","🥗","🍜","🍝","🍛","🍣","🍱","🥟","🍤","🍙","🍚","🧆","🥚","🍳","🥞","🧇","🥓","🥩","🍗","🍖","🌭","🥪","🥙","🧀","🥘","🍲","🍦","🍧","🍨","🍩","🍪","🎂","🍰","🧁","🥧","🍫","🍬","🍭","🍮","🍯","🍼","🥛","☕","🍵","🧃","🥤","🧋","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","🧊"]},
+  {ic:"✈️",e:["✈️","🚀","🛸","🚁","🛶","⛵","🚢","🚂","🚆","🚇","🚊","🚝","🚄","🚅","🚋","🚃","🚗","🚙","🛻","🚚","🚛","🚜","🏎️","🏍️","🛵","🚲","🛴","🛹","🚏","⛽","🚨","🚥","🚦","🛑","🚧","⚓","🛟","🌍","🌎","🌏","🗺️","🧭","🏔️","⛰️","🌋","🏕️","🏖️","🏜️","🏝️","🏞️","🏟️","🏛️","🏗️","🏘️","🏠","🏡","🏢","🏥","🏦","🏨","🏪","🏫","🏬","🏭","🏯","🏰","🗼","🗽","⛪","🕌","⛩️","🕋","⛲","⛺","🌁","🌃","🏙️","🌄","🌅","🌆","🌇","🌉","🌌","🌠","🎇","🎆"]},
+  {ic:"💼",e:["💼","📱","💻","⌨️","🖥️","🖨️","🖱️","💾","💿","📀","📷","📸","📹","🎥","📞","☎️","📺","📻","🎙️","🧭","⏱️","⏲️","⏰","⌚","📡","🔋","🔌","💡","🔦","🕯️","🧯","💰","💳","🪙","💹","📈","📉","📊","📋","📌","📍","📎","📏","📐","✂️","🗑️","🔒","🔓","🔑","🗝️","🔨","⛏️","🛠️","⚔️","🛡️","🔧","🔩","⚙️","⚖️","🔗","🧰","🧲","🪜","🧪","🧬","🔭","🔬","🩺","💊","💉","🩸","🛒","🚪","🪞","🛋️","🪑","🚽","🧴","🧷","🧹","🧺","🧻","🧼","🫧","🪒","🧽"]}
 ];
 
-/* ── GIF search via Tenor (free) ── */
-const TENOR_KEY="AIzaSyAyimkuYQYF_y7VMo0k8qaQMTqkQf9XRVM"; // public demo key
+const TENOR_KEY = "AIzaSyAyimkuYQYF_y7VMo0k8qaQMTqkQf9XRVM";
 
 /* ── State ── */
 const S={
-  gps:null,user:null,loading:true,
-  chats:[],contacts:[],messages:[],
-  activeChat:null,tab:"chats",
-  replyTo:null,uploadPct:null,
-  showAttach:false,showEmojiPicker:false,showInfo:false,showNew:false,
-  showProfile:false,showBgPicker:false,showGifPicker:false,
-  search:"",recording:false,recTime:0,recInt:null,
-  mediaRec:null,recChunks:[],
-  call:null,statuses:[],
-  unsubMsg:null,unsubChats:null,unsubContacts:null,
+  gps:null, user:null,
+  chats:[], contacts:[], messages:[],
+  activeChat:null, tab:"chats",
+  replyTo:null, uploadPct:null,
+  showAttach:false, showEmoji:false, showGif:false, showNew:false,
+  search:"", recording:false, recTime:0, recInt:null, mediaRec:null, recChunks:[],
+  call:null, statuses:[],
+  unsubMsg:null, unsubChats:null, unsubContacts:null,
   mobile:window.innerWidth<768,
-  chatBg:localStorage.getItem("chatBg")||"dots",
-  emojiTab:0,
-  gifSearch:"",gifResults:[],gifLoading:false,
-  adminEmail:ADMIN_EMAIL,
+  bgTheme:localStorage.getItem("csTheme")||"default",
+  gifRes:[], gifBusy:false,
 };
+let pc=null, localStr=null, callUnsub=null, callTimer=null;
+const A = document.getElementById("app");
 
 /* ── DOM helpers ── */
-function h(tag,attrs,...kids){
-  const e=document.createElement(tag);
-  for(const[k,v]of Object.entries(attrs||{})){
-    if(k==="style"&&typeof v==="object")Object.assign(e.style,v);
-    else if(k.startsWith("on")&&typeof v==="function")e.addEventListener(k.slice(2).toLowerCase(),v);
-    else e.setAttribute(k,v);
+function E(tag, attrs) {
+  const el = document.createElement(tag);
+  const kids = Array.prototype.slice.call(arguments, 2);
+  for (const k in attrs||{}) {
+    const v = attrs[k];
+    if (!v && v !== 0) continue;
+    if (k === "style" && typeof v === "object") Object.assign(el.style, v);
+    else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2).toLowerCase(), v);
+    else el.setAttribute(k, v);
   }
-  for(const c of kids)if(c!=null&&c!==false)e.appendChild(typeof c==="string"?document.createTextNode(c):c);
-  return e;
+  for (let i=0; i<kids.length; i++) {
+    const c = kids[i];
+    if (c == null || c === false || c === "") continue;
+    el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  return el;
 }
-const D=(a,...c)=>h("div",a,...c);
-const Sp=(a,...c)=>h("span",a,...c);
-const Bt=(a,...c)=>h("button",a,...c);
-const In=a=>h("input",a);
-const Tx=a=>h("textarea",a);
+function D(a) { return E.apply(null, ["div", a].concat(Array.prototype.slice.call(arguments, 1))); }
+function Sp(a) { return E.apply(null, ["span", a].concat(Array.prototype.slice.call(arguments, 1))); }
+function Bt(a) { return E.apply(null, ["button", a].concat(Array.prototype.slice.call(arguments, 1))); }
+function In(a) { return E("input", a); }
+function Tx(a) { return E("textarea", a); }
 
-function Av(name,size=40,online=false,photo=null){
-  const w=D({style:{position:"relative",flexShrink:0}});
-  if(photo)w.appendChild(h("img",{src:photo,style:{width:size+"px",height:size+"px",borderRadius:"50%",objectFit:"cover"}}));
-  else w.appendChild(D({style:{width:size+"px",height:size+"px",borderRadius:"50%",background:aColor(name),display:"flex",alignItems:"center",justifyContent:"center",fontSize:(size*.36)+"px",fontWeight:700,color:"#fff",userSelect:"none"}},ini(name)));
-  if(online)w.appendChild(D({style:{position:"absolute",bottom:"1px",right:"1px",width:Math.max(8,size*.22)+"px",height:Math.max(8,size*.22)+"px",borderRadius:"50%",background:C.accent,border:"2px solid "+C.panel}}));
+function Av(name, sz, online, photo) {
+  name = name||""; sz = sz||40;
+  const w = D({style:{position:"relative",flexShrink:0}});
+  if (photo) w.appendChild(E("img",{src:photo,style:{width:sz+"px",height:sz+"px",borderRadius:"50%",objectFit:"cover",display:"block"}}));
+  else w.appendChild(D({style:{width:sz+"px",height:sz+"px",borderRadius:"50%",background:aCol(name),display:"flex",alignItems:"center",justifyContent:"center",fontSize:(sz*.36)+"px",fontWeight:700,color:"#fff",userSelect:"none"}}, ini(name)));
+  if (online) w.appendChild(D({style:{position:"absolute",bottom:"1px",right:"1px",width:Math.max(8,sz*.22)+"px",height:Math.max(8,sz*.22)+"px",borderRadius:"50%",background:C.accent,border:"2px solid "+C.panel}}));
   return w;
 }
 
 /* ── Firebase helpers ── */
-async function saveUser(u,name){
-  await setDoc(doc(db,"users",u.uid),{
-    uid:u.uid,name:name||u.displayName||u.email,
-    email:u.email,photoURL:u.photoURL||null,
-    status:"online",lastSeen:serverTimestamp(),
-    createdAt:serverTimestamp(),gps:S.gps,
-    isAdmin:u.email===ADMIN_EMAIL,
-  },{merge:true});
-}
-async function setOnline(uid,status){
-  try{await updateDoc(doc(db,"users",uid),{status,lastSeen:serverTimestamp(),...(S.gps?{gps:S.gps}:{})});}catch(_){}
+const isAdmin = () => S.user && S.user.email === ADMIN_EMAIL;
+
+function saveUser(u, name) {
+  return db.collection("users").doc(u.uid).set({
+    uid:u.uid, name:name||u.displayName||u.email,
+    email:u.email, photoURL:u.photoURL||null,
+    status:"online", lastSeen:firebase.firestore.FieldValue.serverTimestamp(),
+    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+    gps:S.gps, isAdmin:u.email===ADMIN_EMAIL
+  }, {merge:true});
 }
 
-// Privacy: contacts only visible to the pair involved
-function subChats(uid){
-  if(S.unsubChats)S.unsubChats();
-  S.unsubChats=onSnapshot(query(collection(db,"chats"),where("members","array-contains",uid)),snap=>{
-    S.chats=snap.docs.map(d=>({id:d.id,...d.data()}));render();
-  });
-}
-// Only load users you have chatted with OR user searches by starting new chat
-// For "new chat": we load all users but display is private — nobody sees your list
-function subContacts(uid){
-  if(S.unsubContacts)S.unsubContacts();
-  // Each user only sees users relevant to their own chats (privacy)
-  S.unsubContacts=onSnapshot(query(collection(db,"users"),where("uid","!=",uid)),snap=>{
-    S.contacts=snap.docs.map(d=>({id:d.id,...d.data()}));render();
-  });
-}
-function subMsgs(chatId){
-  if(S.unsubMsg)S.unsubMsg();
-  S.messages=[];if(!chatId)return;
-  S.unsubMsg=onSnapshot(query(collection(db,"chats",chatId,"messages"),orderBy("createdAt","asc"),limit(300)),snap=>{
-    S.messages=snap.docs.map(d=>({id:d.id,...d.data()}));render();
-    setTimeout(()=>document.getElementById("msgEnd")?.scrollIntoView({behavior:"smooth"}),60);
-  });
-}
-async function getOrCreate(uid1,uid2){
-  const cid=[uid1,uid2].sort().join("_");
-  const r=doc(db,"chats",cid);
-  if(!(await getDoc(r)).exists())await setDoc(r,{
-    members:[uid1,uid2],isGroup:false,
-    createdAt:serverTimestamp(),lastMessage:"",
-    lastMessageTime:serverTimestamp(),pinnedBy:[],mutedBy:[],
-  });
-  return cid;
-}
-async function sendMsg(payload){
-  if(!S.activeChat)return;
-  const cid=S.activeChat.id,u=S.user;
-  await addDoc(collection(db,"chats",cid,"messages"),{
-    senderId:u.uid,senderName:u.displayName||u.email,
-    createdAt:serverTimestamp(),readBy:[u.uid],
-    reactions:{},deleted:false,
-    ...payload,
-    ...(S.replyTo?{replyTo:{id:S.replyTo.id,text:S.replyTo.text||"",senderName:S.replyTo.senderName}}:{}),
-  });
-  const preview=payload.text||(payload.gif?"🎞️ GIF":payload.file?"📎 "+payload.file.name:payload.location?"📍 Location":"");
-  await updateDoc(doc(db,"chats",cid),{lastMessage:preview,lastMessageTime:serverTimestamp(),lastSenderId:u.uid});
-  S.replyTo=null;
-}
-async function uploadFile(file,onP){
-  const cid=S.activeChat.id,ext=file.name.split(".").pop(),path="chats/"+cid+"/"+Date.now()+"."+ext;
-  const r=sRef(storage,path);
-  return new Promise((res,rej)=>{
-    const t=uploadBytesResumable(r,file,{contentType:file.type});
-    t.on("state_changed",snap=>onP(Math.round(snap.bytesTransferred/snap.totalBytes*100)),rej,
-      async()=>{const url=await getDownloadURL(t.snapshot.ref);res({url,name:file.name,size:file.size,type:file.type});});
-  });
-}
-async function uploadProfilePic(uid,file){
-  const path="avatars/"+uid+"."+file.name.split(".").pop();
-  const r=sRef(storage,path);
-  return new Promise((res,rej)=>{
-    const t=uploadBytesResumable(r,file,{contentType:file.type});
-    t.on("state_changed",null,rej,async()=>{const url=await getDownloadURL(t.snapshot.ref);res(url);});
-  });
-}
-async function reactMsg(msgId,emoji){
-  const r=doc(db,"chats",S.activeChat.id,"messages",msgId),snap=await getDoc(r),uid=S.user.uid;
-  const rxs=snap.data()?.reactions||{};
-  rxs[emoji]?.includes(uid)?await updateDoc(r,{["reactions."+emoji]:arrayRemove(uid)}):await updateDoc(r,{["reactions."+emoji]:arrayUnion(uid)});
-}
-async function delMsg(msgId,all){
-  const r=doc(db,"chats",S.activeChat.id,"messages",msgId);
-  all?await updateDoc(r,{deleted:true,text:"",file:null,gif:null}):await updateDoc(r,{deletedFor:arrayUnion(S.user.uid)});
-}
-function subStatuses(){
-  const cutoff=new Date(Date.now()-86400000);
-  onSnapshot(query(collection(db,"statuses"),where("expiresAt",">",cutoff)),snap=>{
-    S.statuses=snap.docs.map(d=>({id:d.id,...d.data()}));render();
-  });
-}
-async function postStatus(text){
-  await addDoc(collection(db,"statuses"),{uid:S.user.uid,userName:S.user.displayName||S.user.email,text,imageUrl:null,createdAt:serverTimestamp(),expiresAt:new Date(Date.now()+86400000),views:[]});
+function goOnline() {
+  if (!S.user) return;
+  db.collection("users").doc(S.user.uid).update({
+    status:"online", lastSeen:firebase.firestore.FieldValue.serverTimestamp(),
+    ...(S.gps?{gps:S.gps}:{})
+  }).catch(function(){});
 }
 
-/* ── GIF search ── */
-async function searchGifs(q){
-  S.gifLoading=true;render();
-  try{
-    const url=q
-      ?"https://tenor.googleapis.com/v2/search?q="+encodeURIComponent(q)+"&key="+TENOR_KEY+"&limit=24&media_filter=gif"
-      :"https://tenor.googleapis.com/v2/featured?key="+TENOR_KEY+"&limit=24&media_filter=gif";
-    const r=await fetch(url);
-    const data=await r.json();
-    S.gifResults=(data.results||[]).map(g=>({url:g.media_formats?.gif?.url||g.media_formats?.tinygif?.url,preview:g.media_formats?.tinygif?.url||g.media_formats?.gif?.url,title:g.title}));
-  }catch(e){S.gifResults=[];}
-  S.gifLoading=false;render();
+function goOffline() {
+  if (!S.user) return;
+  db.collection("users").doc(S.user.uid).update({
+    status:"offline", lastSeen:firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(function(){});
+}
+
+function subChats(uid) {
+  if (S.unsubChats) S.unsubChats();
+  S.unsubChats = db.collection("chats").where("members","array-contains",uid)
+    .onSnapshot(function(snap) {
+      S.chats = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+      render();
+    });
+}
+
+function subContacts(uid) {
+  if (S.unsubContacts) S.unsubContacts();
+  S.unsubContacts = db.collection("users").where("uid","!=",uid)
+    .onSnapshot(function(snap) {
+      S.contacts = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+      render();
+    });
+}
+
+function subMsgs(chatId) {
+  if (S.unsubMsg) S.unsubMsg();
+  S.messages = [];
+  if (!chatId) return;
+  S.unsubMsg = db.collection("chats").doc(chatId).collection("messages")
+    .orderBy("createdAt","asc").limit(300)
+    .onSnapshot(function(snap) {
+      S.messages = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+      render();
+      setTimeout(function(){var el=document.getElementById("msgEnd");if(el)el.scrollIntoView({behavior:"smooth"});},60);
+    });
+}
+
+function getOrCreate(uid1, uid2) {
+  const cid = [uid1,uid2].sort().join("_");
+  return db.collection("chats").doc(cid).get().then(function(snap) {
+    if (!snap.exists) {
+      return db.collection("chats").doc(cid).set({
+        members:[uid1,uid2], isGroup:false,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+        lastMessage:"", lastMessageTime:firebase.firestore.FieldValue.serverTimestamp(),
+        pinnedBy:[], mutedBy:[]
+      });
+    }
+  }).then(function(){ return cid; });
+}
+
+function sendMsg(payload) {
+  if (!S.activeChat) return Promise.resolve();
+  const cid = S.activeChat.id, u = S.user;
+  const data = Object.assign({
+    senderId:u.uid, senderName:u.displayName||u.email,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+    readBy:[u.uid], reactions:{}, deleted:false
+  }, payload);
+  if (S.replyTo) data.replyTo = {id:S.replyTo.id, text:S.replyTo.text||"", senderName:S.replyTo.senderName};
+  return db.collection("chats").doc(cid).collection("messages").add(data).then(function() {
+    const preview = payload.text || (payload.gif?"🎞️ GIF":payload.file?"📎 "+payload.file.name:payload.location?"📍 Location":"");
+    S.replyTo = null;
+    return db.collection("chats").doc(cid).update({
+      lastMessage:preview,
+      lastMessageTime:firebase.firestore.FieldValue.serverTimestamp(),
+      lastSenderId:u.uid
+    });
+  });
+}
+
+function uploadFile(file, onP) {
+  const path = "chats/"+S.activeChat.id+"/"+Date.now()+"."+file.name.split(".").pop();
+  const ref = storage.ref(path);
+  return new Promise(function(res, rej) {
+    const task = ref.put(file, {contentType:file.type});
+    task.on("state_changed", function(s){onP(Math.round(s.bytesTransferred/s.totalBytes*100));}, rej,
+      function(){ref.getDownloadURL().then(function(url){res({url:url,name:file.name,size:file.size,type:file.type});});});
+  });
+}
+
+function uploadAvatar(uid, file) {
+  const ref = storage.ref("avatars/"+uid+"."+file.name.split(".").pop());
+  return new Promise(function(res, rej) {
+    const task = ref.put(file, {contentType:file.type});
+    task.on("state_changed", null, rej, function(){ref.getDownloadURL().then(res);});
+  });
+}
+
+function reactMsg(cid, msgId, emoji) {
+  const ref = db.collection("chats").doc(cid).collection("messages").doc(msgId);
+  return ref.get().then(function(snap) {
+    const rx = (snap.data()||{}).reactions || {};
+    const uid = S.user.uid;
+    if (rx[emoji] && rx[emoji].indexOf(uid) >= 0) {
+      return ref.update({["reactions."+emoji]: firebase.firestore.FieldValue.arrayRemove(uid)});
+    } else {
+      return ref.update({["reactions."+emoji]: firebase.firestore.FieldValue.arrayUnion(uid)});
+    }
+  });
+}
+
+function delMsg(cid, msgId, all) {
+  const ref = db.collection("chats").doc(cid).collection("messages").doc(msgId);
+  return all
+    ? ref.update({deleted:true, text:"", file:null, gif:null})
+    : ref.update({deletedFor: firebase.firestore.FieldValue.arrayUnion(S.user.uid)});
+}
+
+function subStatuses() {
+  const cutoff = new Date(Date.now()-864e5);
+  db.collection("statuses").where("expiresAt",">",cutoff)
+    .onSnapshot(function(snap) {
+      S.statuses = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+      render();
+    });
+}
+
+function postStatus(text) {
+  return db.collection("statuses").add({
+    uid:S.user.uid, userName:S.user.displayName||S.user.email,
+    photoURL:S.user.photoURL||null, text:text, imageUrl:null,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+    expiresAt:new Date(Date.now()+864e5), views:[]
+  });
+}
+
+/* ── GIF ── */
+function loadGifs(q) {
+  S.gifBusy = true; render();
+  const url = q
+    ? "https://tenor.googleapis.com/v2/search?q="+encodeURIComponent(q)+"&key="+TENOR_KEY+"&limit=20&media_filter=gif"
+    : "https://tenor.googleapis.com/v2/featured?key="+TENOR_KEY+"&limit=20&media_filter=gif";
+  fetch(url).then(function(r){return r.json();}).then(function(data) {
+    S.gifRes = (data.results||[]).map(function(g){
+      return {url:g.media_formats&&g.media_formats.gif&&g.media_formats.gif.url, thumb:g.media_formats&&(g.media_formats.tinygif||g.media_formats.gif)&&(g.media_formats.tinygif||g.media_formats.gif).url};
+    });
+    S.gifBusy = false; render();
+  }).catch(function(){S.gifRes=[];S.gifBusy=false;render();});
 }
 
 /* ── WebRTC ── */
-let pc=null,localStr=null,callUnsub=null,callTimer=null;
-async function startCall(chat,video){
-  const oUid=chat.members?.find(m=>m!==S.user.uid);
-  const other=S.contacts.find(c=>c.uid===oUid);
-  S.call={remoteUid:oUid,remoteName:other?.name||other?.email||"User",remotePhoto:other?.photoURL,video,status:"calling",duration:0};
+function startCall(chat, video) {
+  const oUid = chat.members && chat.members.find(function(m){return m!==S.user.uid;});
+  const other = S.contacts.find(function(c){return c.uid===oUid;});
+  S.call = {remoteUid:oUid, remoteName:(other&&(other.name||other.email))||"User", remotePhoto:other&&other.photoURL, video:video, status:"calling", duration:0};
   render();
-  try{
-    localStr=await navigator.mediaDevices.getUserMedia({audio:true,video});
-    setTimeout(()=>{const lv=document.getElementById("lv");if(lv)lv.srcObject=localStr;},100);
-    pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
-    localStr.getTracks().forEach(t=>pc.addTrack(t,localStr));
-    pc.ontrack=e=>{setTimeout(()=>{const rv=document.getElementById("rv");if(rv)rv.srcObject=e.streams[0];},100);S.call.status="connected";render();callTimer=setInterval(()=>{S.call.duration++;render();},1000);};
-    const callId=[S.user.uid,oUid].sort().join("_call_");
-    pc.onicecandidate=async e=>{if(e.candidate){try{await updateDoc(doc(db,"calls",callId),{callerCandidates:arrayUnion(e.candidate.toJSON())});}catch(_){}}};
-    const offer=await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await setDoc(doc(db,"calls",callId),{offer:{type:offer.type,sdp:offer.sdp},caller:S.user.uid,callee:oUid,video,status:"ringing",callerCandidates:[],calleeCandidates:[],createdAt:serverTimestamp()});
-    callUnsub=onSnapshot(doc(db,"calls",callId),async snap=>{
-      const data=snap.data();if(!data||!pc)return;
-      if(data.answer&&pc.signalingState==="have-local-offer")await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-      if(data.calleeCandidates?.length&&pc.remoteDescription)for(const c of data.calleeCandidates){try{await pc.addIceCandidate(new RTCIceCandidate(c));}catch(_){}}
-      if(data.status==="ended")endCall(true);
+  navigator.mediaDevices.getUserMedia({audio:true,video:video}).then(function(stream) {
+    localStr = stream;
+    setTimeout(function(){var lv=document.getElementById("lv");if(lv)lv.srcObject=stream;},100);
+    pc = new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
+    stream.getTracks().forEach(function(t){pc.addTrack(t,stream);});
+    pc.ontrack = function(e) {
+      setTimeout(function(){var rv=document.getElementById("rv");if(rv)rv.srcObject=e.streams[0];},100);
+      S.call.status="connected"; render();
+      callTimer = setInterval(function(){S.call.duration++;render();},1000);
+    };
+    const callId = [S.user.uid,oUid].sort().join("_c_");
+    pc.onicecandidate = function(e) {
+      if (e.candidate) {
+        db.collection("calls").doc(callId).update({callerCandidates:firebase.firestore.FieldValue.arrayUnion(e.candidate.toJSON())}).catch(function(){});
+      }
+    };
+    pc.createOffer().then(function(offer) {
+      return pc.setLocalDescription(offer).then(function() {
+        return db.collection("calls").doc(callId).set({
+          offer:{type:offer.type,sdp:offer.sdp}, caller:S.user.uid, callee:oUid,
+          video:video, status:"ringing", callerCandidates:[], calleeCandidates:[],
+          createdAt:firebase.firestore.FieldValue.serverTimestamp()
+        });
+      });
+    }).then(function() {
+      callUnsub = db.collection("calls").doc(callId).onSnapshot(function(snap) {
+        const data = snap.data(); if (!data||!pc) return;
+        if (data.answer && pc.signalingState==="have-local-offer") {
+          pc.setRemoteDescription(new RTCSessionDescription(data.answer)).catch(function(){});
+        }
+        if (data.calleeCandidates && data.calleeCandidates.length && pc.remoteDescription) {
+          data.calleeCandidates.forEach(function(c){pc.addIceCandidate(new RTCIceCandidate(c)).catch(function(){});});
+        }
+        if (data.status==="ended") endCall(true);
+      });
     });
-  }catch(e){S.call.status="failed";render();}
+  }).catch(function(){S.call.status="failed";render();});
 }
-async function endCall(remote=false){
-  clearInterval(callTimer);callTimer=null;
-  if(!remote&&S.call){try{const cid=[S.user.uid,S.call.remoteUid].sort().join("_call_");await updateDoc(doc(db,"calls",cid),{status:"ended"});}catch(_){}}
-  if(callUnsub){callUnsub();callUnsub=null;}
-  localStr?.getTracks().forEach(t=>t.stop());localStr=null;pc?.close();pc=null;S.call=null;render();
+
+function endCall(remote) {
+  clearInterval(callTimer); callTimer=null;
+  if (!remote && S.call) {
+    db.collection("calls").doc([S.user.uid,S.call.remoteUid].sort().join("_c_")).update({status:"ended"}).catch(function(){});
+  }
+  if (callUnsub){callUnsub();callUnsub=null;}
+  if (localStr) localStr.getTracks().forEach(function(t){t.stop();}); localStr=null;
+  if (pc) pc.close(); pc=null;
+  S.call=null; render();
 }
 
 /* ── Voice recording ── */
-async function startRec(){
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    S.mediaRec=new MediaRecorder(stream);S.recChunks=[];
-    S.mediaRec.ondataavailable=e=>S.recChunks.push(e.data);
-    S.mediaRec.onstop=async()=>{
-      const blob=new Blob(S.recChunks,{type:"audio/webm"}),file=new File([blob],"voice-"+Date.now()+".webm",{type:"audio/webm"});
-      stream.getTracks().forEach(t=>t.stop());
-      S.recording=false;S.recTime=0;clearInterval(S.recInt);S.uploadPct=0;render();
-      try{const fd=await uploadFile(file,p=>{S.uploadPct=p;render();});await sendMsg({file:fd});}catch(e){console.error(e);}
-      S.uploadPct=null;render();
+function startRec() {
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream) {
+    S.mediaRec = new MediaRecorder(stream); S.recChunks = [];
+    S.mediaRec.ondataavailable = function(e){S.recChunks.push(e.data);};
+    S.mediaRec.onstop = function() {
+      const blob = new Blob(S.recChunks,{type:"audio/webm"});
+      const file = new File([blob],"voice-"+Date.now()+".webm",{type:"audio/webm"});
+      stream.getTracks().forEach(function(t){t.stop();});
+      S.recording=false; S.recTime=0; clearInterval(S.recInt); S.uploadPct=0; render();
+      uploadFile(file,function(p){S.uploadPct=p;render();}).then(function(fd){return sendMsg({file:fd});})
+        .catch(function(e){console.error(e);}).then(function(){S.uploadPct=null;render();});
     };
-    S.mediaRec.start();S.recording=true;S.recInt=setInterval(()=>{S.recTime++;render();},1000);render();
-  }catch(e){alert("Mic access denied");}
+    S.mediaRec.start(); S.recording=true;
+    S.recInt = setInterval(function(){S.recTime++;render();},1000);
+    render();
+  }).catch(function(){alert("Microphone access denied.");});
 }
-function stopRec(){S.mediaRec?.stop();}
-function cancelRec(){S.mediaRec?.stream?.getTracks().forEach(t=>t.stop());S.mediaRec=null;S.recording=false;S.recTime=0;clearInterval(S.recInt);render();}
+function stopRec(){if(S.mediaRec)S.mediaRec.stop();}
+function cancelRec(){
+  if(S.mediaRec&&S.mediaRec.stream)S.mediaRec.stream.getTracks().forEach(function(t){t.stop();});
+  S.mediaRec=null;S.recording=false;S.recTime=0;clearInterval(S.recInt);render();
+}
 
-/* ══════════════════════════════════════════════
-   SCREENS
-══════════════════════════════════════════════ */
+/* ═══════════ MODALS ═══════════ */
+function modal(children) {
+  const ov = D({class:"ov"});
+  const box = D({class:"box"});
+  const closeX = Bt({style:{position:"absolute",top:"14px",right:"14px",background:"none",border:"none",color:C.muted,fontSize:"22px",lineHeight:1,cursor:"pointer"},onClick:function(){ov.remove();}}, "✕");
+  box.appendChild(closeX);
+  children.forEach(function(c){if(c)box.appendChild(c);});
+  ov.appendChild(box);
+  ov.addEventListener("click",function(e){if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+  return {ov:ov, box:box};
+}
 
-function screenGPS(){
-  let st="idle";
-  const errDiv=D({style:{display:"none",background:"#ef444420",border:"1px solid #ef4444",borderRadius:"10px",padding:"12px",marginBottom:"16px",color:"#ef4444",fontSize:"13px",lineHeight:"1.5"}});
-  const btn1=Bt({style:{width:"100%",padding:"14px",borderRadius:"12px",border:"none",background:C.accent,color:"#fff",fontSize:"15px",fontWeight:700},
-    onClick(){
-      if(st==="requesting")return;st="requesting";btn1.textContent="⏳ Requesting…";btn1.style.background=C.dim;
+/* ── Profile ── */
+function openProfile(targetUser) {
+  const viewing = targetUser && targetUser.uid !== S.user.uid;
+  const u = targetUser || S.user;
+  let curPhoto = u.photoURL;
+  const avHolder = D({style:{textAlign:"center",marginBottom:"16px",paddingTop:"4px"}});
+  const avWrap = D({style:{display:"inline-block",position:"relative"}});
+  const avEl = D({id:"profAvEl"});
+  function refreshAv(){avEl.innerHTML="";avEl.appendChild(Av(u.displayName||u.email,90,false,curPhoto));}
+  refreshAv();
+  avWrap.appendChild(avEl);
+  const uploadStatus = D({style:{color:C.accent,fontSize:"12px",marginTop:"8px",minHeight:"18px",textAlign:"center"}});
+  if (!viewing) {
+    const camBadge = D({style:{position:"absolute",bottom:"4px",right:"4px",width:"32px",height:"32px",borderRadius:"50%",background:C.accent,border:"3px solid "+C.panel,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px",cursor:"pointer"}}, "📷");
+    const picInp = In({type:"file",accept:"image/*",style:{display:"none"}});
+    picInp.addEventListener("change",function(e) {
+      const file = e.target.files[0]; if(!file) return;
+      uploadStatus.textContent="⏳ Uploading…";
+      uploadAvatar(S.user.uid, file).then(function(url) {
+        return S.user.updateProfile({photoURL:url}).then(function() {
+          return db.collection("users").doc(S.user.uid).update({photoURL:url});
+        }).then(function(){curPhoto=url;refreshAv();uploadStatus.textContent="✅ Photo updated!";});
+      }).catch(function(err){uploadStatus.textContent="❌ Failed: "+err.message;});
+    });
+    camBadge.addEventListener("click",function(){picInp.click();});
+    avWrap.append(camBadge, picInp);
+  }
+  avHolder.append(avWrap, uploadStatus);
+
+  const nameSection = D({style:{marginBottom:"14px"}});
+  nameSection.appendChild(D({class:"lbl"}, "NAME"));
+  if (!viewing) {
+    const nameI = In({class:"inp",type:"text",placeholder:"Your display name",value:u.displayName||""});
+    const saveBtn = Bt({class:"btn btn-g",style:{marginTop:"4px"},onClick:function() {
+      const v = nameI.value.trim(); if(!v) return;
+      S.user.updateProfile({displayName:v}).then(function() {
+        return db.collection("users").doc(S.user.uid).update({name:v});
+      }).then(function(){saveBtn.textContent="✅ Saved!";setTimeout(function(){saveBtn.textContent="Save Name";},2000);render();});
+    }}, "Save Name");
+    nameSection.append(nameI, saveBtn);
+  } else {
+    nameSection.appendChild(D({style:{color:C.text,fontSize:"16px",fontWeight:700,padding:"8px 0"}}, u.name||u.email));
+  }
+
+  const emailSection = D({style:{marginBottom:"14px"}});
+  emailSection.appendChild(D({class:"lbl"}, "EMAIL"));
+  emailSection.appendChild(D({style:{color:C.text,fontSize:"14px",padding:"8px 0",borderBottom:"1px solid "+C.border+"30"}}, u.email));
+
+  const gpsData = viewing ? u.gps : (S.gps||u.gps);
+  const gpsSection = D({style:{marginBottom:"14px"}});
+  gpsSection.appendChild(D({class:"lbl"}, "📍 GPS LOCATION"));
+  if (gpsData && gpsData.lat) {
+    const gr = D({style:{display:"flex",alignItems:"center",gap:"10px",padding:"8px 0"}});
+    gr.append(
+      D({style:{color:C.text,fontSize:"13px",flex:1}}, gpsData.lat.toFixed(5)+", "+gpsData.lng.toFixed(5)),
+      E("a",{href:"https://maps.google.com/?q="+gpsData.lat+","+gpsData.lng,target:"_blank",style:{padding:"6px 14px",borderRadius:"8px",background:C.accent+"20",color:C.accent,fontSize:"12px",fontWeight:700,textDecoration:"none",flexShrink:0}}, "📍 Maps")
+    );
+    gpsSection.appendChild(gr);
+  } else {
+    gpsSection.appendChild(D({style:{color:C.muted,fontSize:"13px",padding:"8px 0"}}, "Location not available yet"));
+  }
+
+  const statusSection = D({style:{marginBottom:"18px"}});
+  statusSection.appendChild(D({class:"lbl"}, "STATUS"));
+  statusSection.appendChild(D({style:{color:u.status==="online"?C.accent:C.muted,fontSize:"14px",padding:"6px 0"}},
+    u.status==="online"?"🟢 Online":"⚫ Last seen "+fmtD(u.lastSeen)));
+
+  const adminBadge = u.email===ADMIN_EMAIL ? D({style:{background:"#f59e0b15",border:"1px solid #f59e0b40",borderRadius:"10px",padding:"10px 14px",color:C.yellow,fontSize:"13px",fontWeight:700,textAlign:"center",marginBottom:"14px"}}, "👑 Admin — Full access") : null;
+
+  const actions = D({style:{display:"flex",flexDirection:"column",gap:"8px"}});
+  if (!viewing) {
+    actions.append(
+      Bt({class:"btn btn-b",onClick:function(){document.querySelector(".ov").remove();openBgPicker();}}, "🎨  Change Chat Background"),
+      Bt({class:"btn btn-r",onClick:function() {
+        if(!confirm("Sign out of ChatSphere?"))return;
+        goOffline();
+        auth.signOut().then(function(){S.activeChat=null;S.messages=[];document.querySelector(".ov").remove();render();});
+      }}, "⏏  Sign Out")
+    );
+  } else if (isAdmin()) {
+    actions.appendChild(Bt({class:"btn btn-g",onClick:function() {
+      getOrCreate(S.user.uid, u.uid).then(function(cid) {
+        const ex = S.chats.find(function(c){return c.id===cid;});
+        S.activeChat = ex||{id:cid,members:[S.user.uid,u.uid],isGroup:false,lastMessage:"",lastMessageTime:null,pinnedBy:[],mutedBy:[]};
+        subMsgs(cid); document.querySelector(".ov").remove(); render();
+      });
+    }}, "💬  Message "+(u.name||u.email)));
+  }
+
+  const title = D({style:{color:C.text,fontSize:"18px",fontWeight:800,marginBottom:"20px",paddingRight:"28px"}}, viewing?"Contact Info":"My Profile");
+  modal([title, avHolder, adminBadge, nameSection, emailSection, gpsSection, statusSection, actions]);
+}
+
+/* ── BG Picker ── */
+function openBgPicker() {
+  const grid = D({style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"10px",marginTop:"16px"}});
+  THEMES.forEach(function(t) {
+    const active = S.bgTheme===t.id;
+    const tile = D({style:{height:"72px",borderRadius:"12px",cursor:"pointer",position:"relative",overflow:"hidden",background:t.bg,backgroundImage:t.pat,backgroundSize:"20px 20px",border:active?"2px solid "+C.accent:"2px solid "+C.border,transition:"all .15s"},
+      onClick:function(){S.bgTheme=t.id;localStorage.setItem("csTheme",t.id);document.querySelector(".ov").remove();render();}});
+    tile.addEventListener("mouseenter",function(){tile.style.transform="scale(1.03)";});
+    tile.addEventListener("mouseleave",function(){tile.style.transform="scale(1)";});
+    tile.appendChild(D({style:{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.6)",padding:"4px 8px",fontSize:"12px",color:"#fff",fontWeight:600}}, t.name+(active?" ✓":"")));
+    grid.appendChild(tile);
+  });
+  modal([
+    D({style:{color:C.text,fontSize:"18px",fontWeight:800,marginBottom:"4px"}}, "🎨 Chat Background"),
+    D({style:{color:C.muted,fontSize:"13px",marginBottom:"4px"}}, "Saved in your browser"),
+    grid
+  ]);
+}
+
+/* ── Admin Panel ── */
+function openAdmin() {
+  const listWrap = D({style:{marginTop:"8px",maxHeight:"400px",overflowY:"auto"}});
+  function loadUsers() {
+    listWrap.innerHTML="";
+    listWrap.appendChild(D({style:{color:C.muted,fontSize:"13px",padding:"16px",textAlign:"center"}}, "⏳ Loading users…"));
+    db.collection("users").get().then(function(snap) {
+      const users = snap.docs.map(function(d){return d.data();}).sort(function(a,b){return b.status==="online"?1:-1;});
+      listWrap.innerHTML="";
+      listWrap.appendChild(D({style:{color:C.muted,fontSize:"11px",fontWeight:700,letterSpacing:".5px",marginBottom:"10px"}},
+        users.length+" USERS · "+users.filter(function(u){return u.status==="online";}).length+" ONLINE NOW"));
+      users.forEach(function(u) {
+        const row = D({style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 0",borderBottom:"1px solid "+C.border+"25",cursor:"pointer"}});
+        row.addEventListener("mouseenter",function(){row.style.background=C.border+"20";});
+        row.addEventListener("mouseleave",function(){row.style.background="transparent";});
+        row.addEventListener("click",function(){document.querySelector(".ov").remove();openProfile(u);});
+        const gpsBadge = (u.gps&&u.gps.lat) ? E("a",{href:"https://maps.google.com/?q="+u.gps.lat+","+u.gps.lng,target:"_blank",onClick:function(e){e.stopPropagation();},style:{padding:"4px 10px",borderRadius:"6px",background:C.accent+"20",color:C.accent,fontSize:"10px",fontWeight:700,textDecoration:"none",flexShrink:0,whiteSpace:"nowrap"}}, "📍 Map") : D({});
+        const rmBtn = u.email!==ADMIN_EMAIL ? Bt({style:{padding:"4px 10px",borderRadius:"6px",border:"1px solid "+C.red+"40",background:"none",color:C.red,fontSize:"11px",cursor:"pointer",flexShrink:0},
+          onClick:function(e){e.stopPropagation();if(!confirm("Remove "+u.name+"?"))return;db.collection("users").doc(u.uid).delete().then(function(){row.remove();});}}, "✕") : D({});
+        row.append(Av(u.name||u.email,42,u.status==="online",u.photoURL),
+          D({style:{flex:1,minWidth:0}},
+            D({style:{color:C.text,fontWeight:600,fontSize:"14px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}, (u.name||u.email)+(u.email===ADMIN_EMAIL?" 👑":"")),
+            D({style:{color:u.status==="online"?C.accent:C.muted,fontSize:"11px"}}, u.status==="online"?"🟢 Online":"⚫ "+fmtD(u.lastSeen))
+          ), gpsBadge, rmBtn);
+        listWrap.appendChild(row);
+      });
+    }).catch(function(e){listWrap.innerHTML="";listWrap.appendChild(D({style:{color:C.red,fontSize:"13px",padding:"12px"}}, "Error: "+e.message));});
+  }
+  loadUsers();
+  modal([
+    D({style:{color:C.yellow,fontSize:"18px",fontWeight:800,marginBottom:"2px"}}, "👑 Admin Panel"),
+    D({style:{color:C.muted,fontSize:"12px",marginBottom:"16px"}}, "Visible only to "+ADMIN_EMAIL),
+    listWrap,
+    Bt({class:"btn btn-b",style:{marginTop:"12px"},onClick:loadUsers}, "🔄  Refresh")
+  ]);
+}
+
+/* ── Status ── */
+function openCompose() {
+  const ov = D({style:{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:400,display:"flex",alignItems:"flex-end"}});
+  const ta = Tx({placeholder:"What's on your mind?",rows:"3",style:{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:"12px",padding:"12px 14px",color:C.text,fontSize:"14px",resize:"none",outline:"none",boxSizing:"border-box",marginBottom:"12px"}});
+  const sheet = D({style:{background:C.panel,borderRadius:"20px 20px 0 0",padding:"24px",width:"100%",maxWidth:"600px",margin:"0 auto"}});
+  sheet.append(E("h3",{style:{color:C.text,margin:"0 0 14px"}}, "Add Status Update"), ta,
+    D({style:{display:"flex",gap:"10px"}},
+      Bt({class:"btn btn-g",style:{flex:2,marginTop:0},onClick:function(){if(!ta.value.trim())return;postStatus(ta.value.trim()).then(function(){ov.remove();});}}, "Post Status"),
+      Bt({class:"btn btn-b",style:{flex:1,marginTop:0},onClick:function(){ov.remove();}}, "Cancel")
+    ));
+  ov.appendChild(sheet);
+  ov.addEventListener("click",function(e){if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+}
+
+function viewStatus(items, name, photo) {
+  let idx = 0;
+  const ov = D({style:{position:"fixed",inset:0,background:"#000",zIndex:600,display:"flex",flexDirection:"column"}});
+  const prog = D({style:{display:"flex",gap:"4px",padding:"12px 12px 0",flexShrink:0}});
+  function upProg(){prog.innerHTML="";items.forEach(function(_,i){prog.appendChild(D({style:{flex:1,height:"3px",borderRadius:"2px",background:i<idx?"#fff":i===idx?C.accent:"rgba(255,255,255,.25)"}}));});}
+  upProg();
+  const nr = D({style:{display:"flex",alignItems:"center",gap:"10px",padding:"12px 16px",flexShrink:0}});
+  nr.append(Av(name,38,false,photo), Sp({style:{color:"#fff",fontWeight:600,flex:1}},name),
+    Bt({style:{background:"none",border:"none",color:"#fff",fontSize:"22px",cursor:"pointer"},onClick:function(){ov.remove();}}, "✕"));
+  const cnt = D({style:{flex:1,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"},
+    onClick:function(){idx<items.length-1?idx++:ov.remove();upProg();refCnt();}});
+  function refCnt(){
+    cnt.innerHTML="";
+    const item=items[idx];
+    cnt.appendChild(item&&item.imageUrl
+      ? E("img",{src:item.imageUrl,style:{maxWidth:"100%",maxHeight:"70vh",objectFit:"contain"}})
+      : D({style:{color:"#fff",fontSize:"22px",fontWeight:600,padding:"32px",textAlign:"center",lineHeight:"1.6"}}, (item&&item.text)||""));
+  }
+  refCnt();
+  ov.append(prog,nr,cnt);
+  document.body.appendChild(ov);
+}
+
+/* ═══════════ SCREENS ═══════════ */
+function screenGPS() {
+  let st = "idle";
+  const errDiv = D({style:{display:"none",background:"#ef444418",border:"1px solid #ef444440",borderRadius:"10px",padding:"12px",marginBottom:"16px",color:C.red,fontSize:"13px",lineHeight:"1.7"}});
+  const btn1 = Bt({style:{width:"100%",padding:"14px",borderRadius:"12px",border:"none",background:C.accent,color:"#fff",fontSize:"15px",fontWeight:700,cursor:"pointer"},
+    onClick:function(){
+      if(st==="requesting")return;
+      st="requesting"; btn1.textContent="⏳ Requesting…"; btn1.style.background=C.dim;
       navigator.geolocation.getCurrentPosition(
-        pos=>{S.gps={lat:pos.coords.latitude,lng:pos.coords.longitude};render();},
-        ()=>{st="denied";btn1.textContent="📍 Allow Location & Continue";btn1.style.background=C.accent;errDiv.style.display="block";errDiv.textContent="⚠️ Denied. Go to browser Settings → Site Permissions → Location → Allow, then retry.";},
+        function(pos){S.gps={lat:pos.coords.latitude,lng:pos.coords.longitude};render();},
+        function(){st="idle";btn1.textContent="📍 Allow Location & Continue";btn1.style.background=C.accent;errDiv.style.display="block";errDiv.textContent="Location denied. Tap the lock icon 🔒 in your browser address bar → set Location to Allow → then try again.";},
         {enableHighAccuracy:true,timeout:12000}
       );
-    }},"📍 Allow Location & Continue");
-  return D({style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center"}},
-    D({style:{background:C.panel,border:"1px solid "+C.border,borderRadius:"20px",padding:"48px 36px",maxWidth:"400px",width:"90%",textAlign:"center"}},
-      D({style:{fontSize:"56px",marginBottom:"12px"}},"📍"),
-      h("h2",{style:{color:C.text,margin:"0 0 8px",fontSize:"22px",fontWeight:800}},"Location Required"),
-      h("p",{style:{color:C.muted,margin:"0 0 24px",lineHeight:"1.7",fontSize:"14px"}},"ChatSphere requires your precise GPS location to continue."),
-      errDiv,btn1,
-      h("p",{style:{color:C.muted,fontSize:"11px",marginTop:"16px"}},"🔒 Encrypted · Never sold · You control sharing"),
+    }}, "📍 Allow Location & Continue");
+  return D({style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}},
+    D({style:{background:C.panel,border:"1px solid "+C.border,borderRadius:"20px",padding:"48px 32px",maxWidth:"400px",width:"100%",textAlign:"center"}},
+      D({style:{fontSize:"64px",marginBottom:"12px"}}, "📍"),
+      E("h2",{style:{color:C.text,margin:"0 0 10px",fontSize:"22px",fontWeight:800}}, "Location Required"),
+      E("p",{style:{color:C.muted,margin:"0 0 24px",lineHeight:"1.7",fontSize:"14px"}}, "ChatSphere requires your GPS location to continue. This is mandatory."),
+      errDiv, btn1,
+      E("p",{style:{color:C.muted,fontSize:"11px",marginTop:"16px"}}, "🔒 Location is encrypted and only visible to admin")
     ));
 }
 
-function screenLogin(){
-  let tab="google",mode="signin";
-  const root=D({style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center"}});
-  const card=D({style:{background:C.panel,border:"1px solid "+C.border,borderRadius:"20px",padding:"44px 36px",maxWidth:"420px",width:"90%"}});
-  const errBox=D({style:{display:"none",background:"#ef444420",border:"1px solid #ef4444",borderRadius:"8px",padding:"10px 14px",marginBottom:"14px",color:"#ef4444",fontSize:"13px"}});
-  const showErr=msg=>{errBox.textContent=msg;errBox.style.display="block";};
-  const tabBar=D({style:{display:"flex",background:C.card,borderRadius:"10px",padding:"4px",marginBottom:"20px"}});
-  const body=D({});
-  function mkTab(t,l){return Bt({style:{flex:1,padding:"10px",border:"none",borderRadius:"8px",fontWeight:600,fontSize:"13px",background:tab===t?C.accent:"transparent",color:tab===t?"#fff":C.muted},onClick(){tab=t;rebuild();}},l);}
-  function mkInp(ph,type="text"){return In({type,placeholder:ph,style:{padding:"12px 14px",borderRadius:"10px",border:"1px solid "+C.border,background:C.card,color:C.text,fontSize:"14px",outline:"none",width:"100%",marginBottom:"10px"}});}
-  function rebuild(){
-    tabBar.innerHTML="";tabBar.append(mkTab("google","🔑 Google"),mkTab("email","✉️ Email"));
-    body.innerHTML="";errBox.style.display="none";
-    if(tab==="google"){
-      body.appendChild(Bt({style:{width:"100%",padding:"14px",borderRadius:"12px",border:"1px solid "+C.border,background:C.card,color:C.text,fontSize:"15px",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:"10px"},
-        async onClick(){try{const r=await signInWithPopup(auth,gp);await saveUser(r.user,r.user.displayName);}catch(e){showErr(e.message);}}},
-        Sp({style:{fontSize:"18px"}},"G")," Continue with Google"));
-    }else{
-      const modeBar=D({style:{display:"flex",background:C.card,borderRadius:"8px",padding:"3px",marginBottom:"12px"}});
-      modeBar.append(...[["signin","Sign In"],["signup","Create Account"]].map(([m,l])=>Bt({style:{flex:1,padding:"8px",border:"none",borderRadius:"6px",fontWeight:600,fontSize:"12px",background:mode===m?C.blue:"transparent",color:mode===m?"#fff":C.muted},onClick(){mode=m;rebuild();}},l)));
-      const nameI=mkInp("Full Name"),emailI=mkInp("Email","email"),passI=mkInp("Password","password");
-      const sb=Bt({style:{width:"100%",padding:"14px",borderRadius:"12px",border:"none",background:C.accent,color:"#fff",fontSize:"15px",fontWeight:700},
-        async onClick(){
-          errBox.style.display="none";
-          try{
-            let r;
-            if(mode==="signup"){r=await createUserWithEmailAndPassword(auth,emailI.value,passI.value);await updateProfile(r.user,{displayName:nameI.value});}
-            else r=await signInWithEmailAndPassword(auth,emailI.value,passI.value);
-            await saveUser(r.user,nameI.value||r.user.displayName);
-          }catch(e){showErr(e.code==="auth/wrong-password"?"Wrong password":e.code==="auth/user-not-found"?"No account — sign up instead":e.code==="auth/email-already-in-use"?"Email taken — sign in":e.message);}
-        }},mode==="signin"?"Sign In":"Create Account");
-      body.append(modeBar,...(mode==="signup"?[nameI]:[]),emailI,passI,sb);
+function screenLogin() {
+  let tab = "google", mode = "signin";
+  const root = D({style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}});
+  const card = D({style:{background:C.panel,border:"1px solid "+C.border,borderRadius:"20px",padding:"40px 32px",maxWidth:"420px",width:"100%"}});
+  const errBox = D({style:{display:"none",background:"#ef444418",border:"1px solid "+C.red,borderRadius:"8px",padding:"10px 14px",marginBottom:"14px",color:C.red,fontSize:"13px"}});
+  const tabBar = D({style:{display:"flex",background:C.card,borderRadius:"10px",padding:"4px",marginBottom:"20px"}});
+  const body = D({});
+  function mkTab(t,l){
+    return Bt({style:{flex:1,padding:"10px",border:"none",borderRadius:"8px",fontWeight:600,fontSize:"13px",background:tab===t?C.accent:"transparent",color:tab===t?"#fff":C.muted,cursor:"pointer"},
+      onClick:function(){tab=t;rebuild();}}, l);
+  }
+  function mkI(ph,type){return In({type:type||"text",placeholder:ph,class:"inp"});}
+  function rebuild() {
+    tabBar.innerHTML=""; tabBar.append(mkTab("google","🔑 Google"), mkTab("email","✉️ Email"));
+    body.innerHTML=""; errBox.style.display="none";
+    if (tab==="google") {
+      body.appendChild(Bt({style:{width:"100%",padding:"14px",borderRadius:"12px",border:"1px solid "+C.border,background:C.card,color:C.text,fontSize:"15px",fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:"12px",cursor:"pointer"},
+        onClick:function(){
+          auth.signInWithPopup(gp).then(function(r){return saveUser(r.user,r.user.displayName);})
+            .catch(function(e){errBox.textContent=e.message;errBox.style.display="block";});
+        }}, Sp({style:{fontSize:"18px"}}, "G"), " Continue with Google"));
+    } else {
+      const mb = D({style:{display:"flex",background:C.card,borderRadius:"8px",padding:"3px",marginBottom:"12px"}});
+      mb.append(
+        Bt({style:{flex:1,padding:"8px",border:"none",borderRadius:"6px",fontWeight:600,fontSize:"12px",background:mode==="signin"?C.blue:"transparent",color:mode==="signin"?"#fff":C.muted,cursor:"pointer"},onClick:function(){mode="signin";rebuild();}}, "Sign In"),
+        Bt({style:{flex:1,padding:"8px",border:"none",borderRadius:"6px",fontWeight:600,fontSize:"12px",background:mode==="signup"?C.blue:"transparent",color:mode==="signup"?"#fff":C.muted,cursor:"pointer"},onClick:function(){mode="signup";rebuild();}}, "Create Account")
+      );
+      const nI=mkI("Full Name"), eI=mkI("Email","email"), pI=mkI("Password","password");
+      const submitBtn = Bt({class:"btn btn-g",style:{marginTop:"4px"},onClick:function() {
+        errBox.style.display="none";
+        const p = mode==="signup"
+          ? auth.createUserWithEmailAndPassword(eI.value,pI.value).then(function(r){return r.user.updateProfile({displayName:nI.value||eI.value.split("@")[0]}).then(function(){return r;});})
+          : auth.signInWithEmailAndPassword(eI.value,pI.value);
+        p.then(function(r){return saveUser(r.user,nI.value||r.user.displayName);})
+         .catch(function(e){
+           errBox.textContent = e.code==="auth/wrong-password"||e.code==="auth/invalid-credential"?"Wrong email or password"
+             :e.code==="auth/user-not-found"?"No account found — sign up instead"
+             :e.code==="auth/email-already-in-use"?"Email taken — sign in instead":e.message;
+           errBox.style.display="block";
+         });
+      }}, mode==="signin"?"Sign In":"Create Account");
+      if (mode==="signup") body.append(mb,nI,eI,pI,submitBtn);
+      else body.append(mb,eI,pI,submitBtn);
     }
   }
   rebuild();
   card.append(
-    D({style:{textAlign:"center",marginBottom:"28px"}},
-      D({style:{fontSize:"52px",marginBottom:"8px"}},"💬"),
-      h("h1",{style:{color:C.accent,margin:0,fontSize:"28px",fontWeight:800}},"ChatSphere"),
-      D({style:{color:C.muted,fontSize:"12px",marginTop:"4px"}},"📍 "+S.gps.lat.toFixed(4)+", "+S.gps.lng.toFixed(4)+" · Verified ✓"),
+    D({style:{textAlign:"center",marginBottom:"24px"}},
+      D({style:{fontSize:"52px",marginBottom:"8px"}}, "💬"),
+      E("h1",{style:{color:C.accent,margin:0,fontSize:"26px",fontWeight:800}}, "ChatSphere"),
+      D({style:{color:C.muted,fontSize:"12px",marginTop:"6px"}}, "📍 "+S.gps.lat.toFixed(4)+", "+S.gps.lng.toFixed(4)+" · GPS Verified ✓")
     ),
-    tabBar,errBox,body,
-    D({style:{color:C.muted,fontSize:"11px",textAlign:"center",marginTop:"20px"}},"By continuing you agree to our Terms & Privacy Policy"),
+    tabBar, errBox, body,
+    D({style:{color:C.muted,fontSize:"11px",textAlign:"center",marginTop:"16px"}}, "By continuing you agree to our Terms & Privacy Policy")
   );
-  root.appendChild(card);return root;
+  root.appendChild(card);
+  return root;
 }
 
-/* ── Profile Modal ── */
-function openProfile(){
-  const u=S.user;
-  let uploading=false;
-  const ov=D({class:"modal-ov"});
-  const box=D({class:"modal-box"});
-
-  const avWrap=D({style:{textAlign:"center",marginBottom:"20px",cursor:"pointer",position:"relative",display:"inline-block"}});
-  const avEl=Av(u.displayName||u.email,80,false,u.photoURL);
-  const editBadge=D({style:{position:"absolute",bottom:0,right:0,width:"26px",height:"26px",borderRadius:"50%",background:C.accent,border:"2px solid "+C.panel,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px"}},"✏️");
-  avWrap.append(avEl,editBadge);
-  const picInp=In({type:"file",accept:"image/*",style:{display:"none"}});
-  const statusMsg=D({style:{color:C.accent,fontSize:"12px",textAlign:"center",marginTop:"4px",minHeight:"16px"}});
-  picInp.addEventListener("change",async e=>{
-    const file=e.target.files[0];if(!file)return;
-    statusMsg.textContent="Uploading…";uploading=true;
-    try{
-      const url=await uploadProfilePic(u.uid,file);
-      await updateProfile(u,{photoURL:url});
-      await updateDoc(doc(db,"users",u.uid),{photoURL:url});
-      statusMsg.textContent="✅ Profile picture updated!";
-      avEl.querySelector("img,div").replaceWith(h("img",{src:url,style:{width:"80px",height:"80px",borderRadius:"50%",objectFit:"cover"}}));
-    }catch(err){statusMsg.textContent="❌ Upload failed";} uploading=false;
-  });
-  avWrap.addEventListener("click",()=>picInp.click());
-
-  const nameI=In({type:"text",placeholder:"Display name",value:u.displayName||"",style:{padding:"12px 14px",borderRadius:"10px",border:"1px solid "+C.border,background:C.card,color:C.text,fontSize:"14px",outline:"none",width:"100%",marginBottom:"10px"}});
-  const emailEl=D({style:{padding:"10px 14px",borderRadius:"10px",border:"1px solid "+C.border,background:C.card+"80",color:C.muted,fontSize:"14px",marginBottom:"10px"}},u.email);
-
-  const isAdmin=u.email===ADMIN_EMAIL;
-  const adminBadge=isAdmin?D({style:{background:"#f59e0b20",border:"1px solid #f59e0b",borderRadius:"8px",padding:"6px 12px",color:"#f59e0b",fontSize:"12px",fontWeight:700,marginBottom:"12px",textAlign:"center"}},"👑 Admin"):"";
-
-  const saveBtn=Bt({style:{width:"100%",padding:"12px",borderRadius:"10px",border:"none",background:C.accent,color:"#fff",fontWeight:700,fontSize:"14px",marginBottom:"10px"},
-    async onClick(){
-      if(!nameI.value.trim())return;
-      await updateProfile(u,{displayName:nameI.value.trim()});
-      await updateDoc(doc(db,"users",u.uid),{name:nameI.value.trim()});
-      statusMsg.textContent="✅ Name updated!";
-    }},"Save Changes");
-
-  const logoutBtn=Bt({style:{width:"100%",padding:"12px",borderRadius:"10px",border:"1px solid "+C.border,background:"none",color:C.red,fontWeight:700,fontSize:"14px"},
-    async onClick(){
-      await setOnline(u.uid,"offline");
-      await signOut(auth);
-      ov.remove();S.activeChat=null;S.messages=[];render();
-    }},"⏏ Sign Out");
-
-  const closeBtn=Bt({style:{position:"absolute",top:"16px",right:"16px",background:"none",border:"none",color:C.muted,fontSize:"20px",cursor:"pointer"},onClick:()=>ov.remove()},"✕");
-
-  box.style.position="relative";
-  box.append(
-    closeBtn,
-    h("h3",{style:{color:C.text,margin:"0 0 20px",fontSize:"18px",fontWeight:800}},"My Profile"),
-    D({style:{textAlign:"center"}},avWrap,picInp),
-    statusMsg,
-    isAdmin?adminBadge:"",
-    D({style:{color:C.muted,fontSize:"11px",marginBottom:"6px"}},"Display Name"),nameI,
-    D({style:{color:C.muted,fontSize:"11px",marginBottom:"6px"}},"Email"),emailEl,
-    D({style:{color:C.muted,fontSize:"11px",marginBottom:"12px"}},"📍 "+S.gps.lat.toFixed(4)+", "+S.gps.lng.toFixed(4)),
-    saveBtn,logoutBtn,
-  );
-  ov.appendChild(box);
-  ov.addEventListener("click",e=>{if(e.target===ov)ov.remove();});
-  document.body.appendChild(ov);
-}
-
-/* ── Background picker ── */
-function openBgPicker(){
-  const ov=D({class:"modal-ov"});
-  const box=D({class:"modal-box"});
-  box.style.position="relative";
-  const closeBtn=Bt({style:{position:"absolute",top:"16px",right:"16px",background:"none",border:"none",color:C.muted,fontSize:"20px",cursor:"pointer"},onClick:()=>ov.remove()},"✕");
-  const grid=D({style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",marginTop:"16px"}});
-  for(const t of BG_THEMES){
-    const tile=D({style:{
-      height:"80px",borderRadius:"12px",cursor:"pointer",position:"relative",overflow:"hidden",
-      background:t.bg,backgroundImage:t.pattern,backgroundSize:"20px 20px",
-      border:S.chatBg===t.id?"2px solid "+C.accent:"2px solid "+C.border,
-      transition:"border .15s",
-    }});
-    tile.appendChild(D({style:{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,.6)",padding:"4px 6px",fontSize:"11px",color:"#fff",textAlign:"center"}},t.name));
-    if(S.chatBg===t.id)tile.appendChild(D({style:{position:"absolute",top:"6px",right:"6px",fontSize:"16px"}},"✅"));
-    tile.addEventListener("click",()=>{S.chatBg=t.id;localStorage.setItem("chatBg",t.id);ov.remove();render();});
-    grid.appendChild(tile);
+function screenCall() {
+  const call = S.call;
+  const fmt = function(s){return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");};
+  const root = D({style:{position:"fixed",inset:0,background:"#000",zIndex:1000,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}});
+  if (call.video) {
+    root.append(E("video",{id:"rv",autoplay:"",playsinline:"",style:{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}));
+    root.append(E("video",{id:"lv",autoplay:"",muted:"",playsinline:"",style:{position:"absolute",bottom:"100px",right:"20px",width:"120px",height:"160px",borderRadius:"12px",objectFit:"cover",border:"2px solid rgba(255,255,255,.2)",zIndex:2}}));
+    setTimeout(function(){if(localStr){var lv=document.getElementById("lv");if(lv)lv.srcObject=localStr;}},100);
   }
-  box.append(closeBtn,h("h3",{style:{color:C.text,margin:0,fontSize:"18px",fontWeight:800}},"Chat Background"),D({style:{color:C.muted,fontSize:"13px",marginTop:"4px"}},"Choose a background theme for your chats"),grid);
-  ov.appendChild(box);ov.addEventListener("click",e=>{if(e.target===ov)ov.remove();});
-  document.body.appendChild(ov);
-}
-
-/* ── Admin panel ── */
-function openAdminPanel(){
-  const ov=D({class:"modal-ov"});
-  const box=D({class:"modal-box"});
-  box.style.position="relative";
-  const closeBtn=Bt({style:{position:"absolute",top:"16px",right:"16px",background:"none",border:"none",color:C.muted,fontSize:"20px",cursor:"pointer"},onClick:()=>ov.remove()},"✕");
-  const userList=D({style:{marginTop:"16px"}});
-  userList.appendChild(D({style:{color:C.muted,fontSize:"13px"}},"Loading users…"));
-  // Load all users
-  (async()=>{
-    const snap=await new Promise(res=>onSnapshot(collection(db,"users"),res));
-    const users=snap.docs.map(d=>d.data());
-    userList.innerHTML="";
-    userList.appendChild(D({style:{color:C.muted,fontSize:"11px",fontWeight:700,marginBottom:"8px"}},users.length+" REGISTERED USERS"));
-    for(const u of users){
-      const row=D({style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 0",borderBottom:"1px solid "+C.border+"30"}});
-      row.append(Av(u.name||u.email,36,u.status==="online",u.photoURL),
-        D({style:{flex:1}},
-          D({style:{color:C.text,fontWeight:600,fontSize:"13px"}},u.name||u.email+(u.email===ADMIN_EMAIL?" 👑":"")),
-          D({style:{color:u.status==="online"?C.accent:C.muted,fontSize:"11px"}},u.status==="online"?"● Online":"last seen "+(u.lastSeen?fmtD(u.lastSeen):"recently")),
-        ),
-        u.email!==ADMIN_EMAIL?Bt({style:{padding:"4px 10px",borderRadius:"6px",border:"1px solid "+C.red+"50",background:"none",color:C.red,fontSize:"11px",cursor:"pointer"},
-          onClick:async()=>{if(confirm("Remove "+u.name+"?"))await deleteDoc(doc(db,"users",u.uid));row.remove();}},"Remove"):"",
-      );
-      userList.appendChild(row);
-    }
-  })();
-  const statsBox=D({style:{background:C.card,borderRadius:"12px",padding:"16px",marginBottom:"16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}});
-  [["👥","Total Users"],["💬","Total Chats"],["⭕","Active Statuses"],["📍","Live GPS"]].forEach(([ic,label])=>{
-    statsBox.appendChild(D({style:{textAlign:"center"}},D({style:{fontSize:"24px"}}),D({style:{color:C.muted,fontSize:"11px",marginTop:"4px"}},label)));
-  });
-  box.append(closeBtn,h("h3",{style:{color:C.text,margin:"0 0 4px",fontSize:"18px",fontWeight:800}},"👑 Admin Panel"),D({style:{color:"#f59e0b",fontSize:"12px",marginBottom:"16px"}},"Only visible to you"),userList);
-  ov.appendChild(box);ov.addEventListener("click",e=>{if(e.target===ov)ov.remove();});
-  document.body.appendChild(ov);
-}
-
-/* ── Call screen ── */
-function screenCall(){
-  const call=S.call;
-  const fmt=s=>String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
-  const root=D({style:{position:"fixed",inset:0,background:"#000",zIndex:1000,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}});
-  if(call.video){
-    root.append(h("video",{id:"rv",autoplay:"",playsinline:"",style:{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}}));
-    root.append(h("video",{id:"lv",autoplay:"",muted:"",playsinline:"",style:{position:"absolute",bottom:"100px",right:"20px",width:"120px",height:"160px",borderRadius:"12px",objectFit:"cover",border:"2px solid rgba(255,255,255,.2)",zIndex:2}}));
-    setTimeout(()=>{if(localStr){const lv=document.getElementById("lv");if(lv)lv.srcObject=localStr;}},100);
+  const ov = D({style:{position:"relative",zIndex:3,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:"14px"}});
+  ov.append(Av(call.remoteName,90,false,call.remotePhoto),
+    E("h2",{style:{color:"#fff",margin:0,fontSize:"24px",fontWeight:700}}, call.remoteName),
+    D({style:{color:"rgba(255,255,255,.65)",fontSize:"16px"}}, call.status==="calling"?"Calling…":call.status==="connected"?fmt(call.duration):"Call failed"));
+  const ctls = D({style:{display:"flex",gap:"20px",marginTop:"24px",flexWrap:"wrap",justifyContent:"center"}});
+  let muted=false, camOff=false;
+  function mkCBtn(ic,lbl,fn,red) {
+    const b = D({style:{display:"flex",flexDirection:"column",alignItems:"center",gap:"8px",cursor:"pointer"},onClick:fn});
+    b.append(D({style:{width:"60px",height:"60px",borderRadius:"50%",background:red?"#ef4444":"rgba(255,255,255,.18)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px"}}, ic),
+      Sp({style:{color:"rgba(255,255,255,.8)",fontSize:"11px"}}, lbl));
+    return b;
   }
-  const ov=D({style:{position:"relative",zIndex:3,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:"14px"}});
-  ov.append(Av(call.remoteName,90,false,call.remotePhoto),h("h2",{style:{color:"#fff",margin:0,fontSize:"24px",fontWeight:700}},call.remoteName),D({style:{color:"rgba(255,255,255,.6)",fontSize:"16px"}},call.status==="calling"?"Calling…":call.status==="connected"?fmt(call.duration):"Call failed"));
-  const ctls=D({style:{display:"flex",gap:"16px",marginTop:"24px",flexWrap:"wrap",justifyContent:"center"}});
-  let muted=false,camOff=false;
-  function mkCBtn(ic,label,fn,red=false){
-    const b2=D({style:{display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",cursor:"pointer"},onClick:fn});
-    b2.append(D({style:{width:"56px",height:"56px",borderRadius:"50%",background:red?"#ef4444":"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px"}},ic),Sp({style:{color:"#fff",fontSize:"11px"}},label));
-    return b2;
-  }
-  const muteBtn=mkCBtn("🎙","Mute",()=>{muted=!muted;localStr?.getAudioTracks().forEach(t=>t.enabled=!muted);muteBtn.querySelector("div").style.background=muted?"rgba(255,255,255,.4)":"rgba(255,255,255,.15)";});
+  const muteBtn = mkCBtn("🎙","Mute",function(){muted=!muted;if(localStr)localStr.getAudioTracks().forEach(function(t){t.enabled=!muted;});muteBtn.querySelector("div").style.background=muted?"rgba(255,255,255,.45)":"rgba(255,255,255,.18)";});
   ctls.append(muteBtn);
-  if(call.video)ctls.append(mkCBtn("🎥","Camera",()=>{camOff=!camOff;localStr?.getVideoTracks().forEach(t=>t.enabled=!camOff);}));
-  ctls.append(mkCBtn("🔊","Speaker",()=>{}),mkCBtn("📵","End",()=>endCall(),true));
-  ov.appendChild(ctls);root.appendChild(ov);return root;
+  if (call.video) ctls.append(mkCBtn("🎥","Camera",function(){camOff=!camOff;if(localStr)localStr.getVideoTracks().forEach(function(t){t.enabled=!camOff;});}));
+  ctls.append(mkCBtn("🔊","Speaker",function(){}), mkCBtn("📵","End",function(){endCall();},true));
+  ov.appendChild(ctls); root.appendChild(ov);
+  return root;
 }
 
-/* ── Sidebar ── */
-function buildSidebar(){
-  const uid=S.user.uid;
-  const el=D({style:{width:"100%",height:"100%",display:"flex",flexDirection:"column",background:C.panel,borderRight:"1px solid "+C.border}});
-  const hdr=D({style:{padding:"14px 16px",display:"flex",alignItems:"center",gap:"10px",borderBottom:"1px solid "+C.border}});
-  // Avatar opens profile
-  const myAv=Av(S.user.displayName||S.user.email,42,true,S.user.photoURL);
-  myAv.style.cursor="pointer";myAv.addEventListener("click",openProfile);
+/* ═══════════ SIDEBAR ═══════════ */
+function buildSidebar() {
+  const uid = S.user.uid;
+  const el = D({style:{width:"100%",height:"100%",display:"flex",flexDirection:"column",background:C.panel,borderRight:"1px solid "+C.border}});
+
+  // Header
+  const hdr = D({style:{padding:"10px 16px",display:"flex",alignItems:"center",gap:"10px",borderBottom:"1px solid "+C.border}});
+  const myAv = Av(S.user.displayName||S.user.email,42,true,S.user.photoURL);
+  myAv.style.cursor="pointer"; myAv.title="My Profile";
+  myAv.addEventListener("click",function(){openProfile();});
   hdr.append(myAv,
-    D({style:{flex:1,cursor:"pointer"},onClick:openProfile},
-      D({style:{color:C.text,fontWeight:700,fontSize:"15px"}},S.user.displayName||S.user.email),
-      D({style:{color:C.accent,fontSize:"11px"}},"● Online"+(S.user.email===ADMIN_EMAIL?" · 👑 Admin":"")),
+    D({style:{flex:1,minWidth:0,cursor:"pointer"},onClick:function(){openProfile();}},
+      D({style:{color:C.text,fontWeight:700,fontSize:"15px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}, S.user.displayName||S.user.email),
+      D({style:{color:C.accent,fontSize:"11px"}}, "🟢 Online"+(isAdmin()?" · 👑 Admin":""))
     ),
-    Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"18px",padding:"6px",borderRadius:"8px"},title:"New chat",onClick(){S.showNew=!S.showNew;render();}},"✏️"),
-    Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"18px",padding:"6px",borderRadius:"8px"},title:"Chat background",onClick:openBgPicker},"🎨"),
-    S.user.email===ADMIN_EMAIL?Bt({style:{background:"none",border:"none",color:"#f59e0b",fontSize:"18px",padding:"6px",borderRadius:"8px"},title:"Admin panel",onClick:openAdminPanel},"👑"):"",
-    Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"18px",padding:"6px",borderRadius:"8px"},title:"Sign out",async onClick(){await setOnline(uid,"offline");await signOut(auth);S.activeChat=null;S.messages=[];render();}},"⏏"),
+    Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"20px",padding:"7px",borderRadius:"50%",lineHeight:1,cursor:"pointer"},title:"New Chat",
+      onClick:function(){S.showNew=!S.showNew;render();}}, "✏️"),
+    isAdmin() ? Bt({style:{background:"none",border:"none",color:C.yellow,fontSize:"20px",padding:"7px",borderRadius:"50%",lineHeight:1,cursor:"pointer"},title:"Admin Panel",onClick:openAdmin}, "👑") : D({}),
+    // ⋮ menu
+    (function(){
+      const wrap = D({style:{position:"relative"}});
+      const dotBtn = Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"22px",padding:"7px",borderRadius:"50%",lineHeight:1,cursor:"pointer"}}, "⋮");
+      const menu = D({style:{display:"none",position:"absolute",right:0,top:"110%",background:C.card,border:"1px solid "+C.border,borderRadius:"12px",overflow:"hidden",zIndex:50,minWidth:"200px",boxShadow:"0 4px 20px rgba(0,0,0,.5)"}});
+      var mitems = [
+        ["👤  My Profile",function(){openProfile();}],
+        ["🎨  Chat Background",function(){openBgPicker();}],
+        ["⭕  New Status",function(){openCompose();}],
+        ["⏏  Sign Out",function(){if(!confirm("Sign out?"))return;goOffline();auth.signOut().then(function(){S.activeChat=null;S.messages=[];render();});}]
+      ];
+      if (isAdmin()) mitems.splice(3,0,["👑  Admin Panel",openAdmin]);
+      mitems.forEach(function(item) {
+        const it = D({style:{padding:"12px 16px",color:item[0].includes("Sign Out")?C.red:C.text,fontSize:"14px",cursor:"pointer",borderBottom:"1px solid "+C.border+"20"},
+          onClick:function(){item[1]();menu.style.display="none";}}, item[0]);
+        it.addEventListener("mouseenter",function(){it.style.background=C.border+"40";});
+        it.addEventListener("mouseleave",function(){it.style.background="transparent";});
+        menu.appendChild(it);
+      });
+      dotBtn.addEventListener("click",function(e){e.stopPropagation();menu.style.display=menu.style.display==="none"?"block":"none";});
+      document.addEventListener("click",function(){menu.style.display="none";},{passive:true});
+      wrap.append(dotBtn,menu); return wrap;
+    })()
   );
   el.appendChild(hdr);
-  el.appendChild(D({style:{margin:"8px 14px 0",padding:"5px 12px",borderRadius:"20px",background:"#25d36618",border:"1px solid "+C.accent+"40",fontSize:"11px",color:C.accent}},"📍 "+S.gps.lat.toFixed(4)+", "+S.gps.lng.toFixed(4)+" · Live"));
-  const srchRow=D({style:{display:"flex",alignItems:"center",gap:"8px",background:C.card,borderRadius:"10px",padding:"8px 12px"}});
-  const srchI=In({placeholder:"Search…",value:S.search,style:{background:"none",border:"none",color:C.text,fontSize:"13px",flex:1,outline:"none"}});
-  srchI.addEventListener("input",e=>{S.search=e.target.value;render();});
-  srchRow.append(Sp({style:{color:C.muted}},"🔍"),srchI);
-  el.appendChild(D({style:{padding:"10px 14px"}},srchRow));
 
-  if(S.showNew){
-    const nl=D({style:{margin:"0 14px 8px",background:C.card,borderRadius:"12px",border:"1px solid "+C.border,maxHeight:"200px",overflowY:"auto"}});
-    nl.appendChild(D({style:{padding:"8px 12px",color:C.muted,fontSize:"11px",fontWeight:600}},"START NEW CHAT"));
-    // Privacy: only show contacts, not full user list details
-    const others=S.contacts.filter(c=>c.uid!==uid);
-    if(!others.length)nl.appendChild(D({style:{padding:"12px",color:C.muted,fontSize:"13px"}},"No other users yet"));
-    for(const c of others){
-      const row=D({style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",cursor:"pointer",borderTop:"1px solid "+C.border+"20"},
-        async onClick(){
-          const cid=await getOrCreate(uid,c.uid);
-          const ex=S.chats.find(ch=>ch.id===cid);
-          S.activeChat=ex||{id:cid,members:[uid,c.uid],isGroup:false,lastMessage:"",lastMessageTime:null,pinnedBy:[],mutedBy:[]};
-          S.showNew=false;subMsgs(cid);render();
+  // GPS bar
+  el.appendChild(D({style:{padding:"5px 16px",background:C.bg+"80",borderBottom:"1px solid "+C.border+"40",fontSize:"11px",color:C.accent,display:"flex",alignItems:"center",gap:"6px"}},
+    "📍 "+S.gps.lat.toFixed(4)+", "+S.gps.lng.toFixed(4)+" · Live GPS"));
+
+  // Search
+  const srchRow = D({style:{display:"flex",alignItems:"center",gap:"8px",background:C.card,borderRadius:"10px",padding:"8px 12px",margin:"10px 14px"}});
+  const srchI = In({placeholder:"Search or start new chat",value:S.search,style:{background:"none",border:"none",color:C.text,fontSize:"13px",flex:1,outline:"none"}});
+  srchI.addEventListener("input",function(e){S.search=e.target.value;render();});
+  srchRow.append(Sp({style:{color:C.muted,fontSize:"15px"}}, "🔍"), srchI);
+  if (S.search) srchRow.appendChild(Bt({style:{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:"16px"},onClick:function(){S.search="";render();}}, "✕"));
+  el.appendChild(srchRow);
+
+  // New chat
+  if (S.showNew) {
+    const nl = D({style:{margin:"0 14px 8px",background:C.card,borderRadius:"12px",border:"1px solid "+C.border,maxHeight:"220px",overflowY:"auto"}});
+    nl.appendChild(D({style:{padding:"8px 12px",color:C.muted,fontSize:"11px",fontWeight:700,letterSpacing:".5px"}}, "START NEW CHAT"));
+    const others = S.contacts.filter(function(c){return c.uid!==uid;});
+    if (!others.length) nl.appendChild(D({style:{padding:"14px",color:C.muted,fontSize:"13px"}}, "No other users yet. Share your link!"));
+    others.forEach(function(c) {
+      const row = D({style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 12px",cursor:"pointer",borderTop:"1px solid "+C.border+"20"},
+        onClick:function(){
+          getOrCreate(uid,c.uid).then(function(cid){
+            const ex = S.chats.find(function(ch){return ch.id===cid;});
+            S.activeChat = ex||{id:cid,members:[uid,c.uid],isGroup:false,lastMessage:"",lastMessageTime:null,pinnedBy:[],mutedBy:[]};
+            S.showNew=false; subMsgs(cid); render();
+          });
         }});
-      row.append(Av(c.name||c.email,34,c.status==="online",c.photoURL),D({},D({style:{color:C.text,fontSize:"13px",fontWeight:600}},c.name||c.email),D({style:{color:C.muted,fontSize:"11px"}},c.status==="online"?"● Online":"offline")));
+      row.addEventListener("mouseenter",function(){row.style.background=C.border+"30";});
+      row.addEventListener("mouseleave",function(){row.style.background="transparent";});
+      row.append(Av(c.name||c.email,38,c.status==="online",c.photoURL),
+        D({style:{flex:1,minWidth:0}},
+          D({style:{color:C.text,fontSize:"14px",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}, c.name||c.email),
+          D({style:{color:c.status==="online"?C.accent:C.muted,fontSize:"11px"}}, c.status==="online"?"🟢 Online":"last seen "+fmtD(c.lastSeen))
+        ));
       nl.appendChild(row);
-    }
+    });
     el.appendChild(nl);
   }
 
-  const tabs=D({style:{display:"flex",margin:"0 14px",borderBottom:"1px solid "+C.border}});
-  for(const[t,l]of[["chats","💬 Chats"],["status","⭕ Status"],["calls","📞 Calls"]]){
-    tabs.appendChild(Bt({style:{flex:1,padding:"9px 4px",background:"none",border:"none",borderBottom:S.tab===t?"2px solid "+C.accent:"2px solid transparent",color:S.tab===t?C.accent:C.muted,fontSize:"12px",fontWeight:600},onClick(){S.tab=t;render();}},l));
-  }
+  // Tabs
+  const tabs = D({style:{display:"flex",margin:"0 14px",borderBottom:"1px solid "+C.border}});
+  [["chats","💬 Chats"],["status","⭕ Status"],["calls","📞 Calls"]].forEach(function(pair) {
+    tabs.appendChild(Bt({style:{flex:1,padding:"9px 4px",background:"none",border:"none",borderBottom:S.tab===pair[0]?"2px solid "+C.accent:"2px solid transparent",color:S.tab===pair[0]?C.accent:C.muted,fontSize:"12px",fontWeight:600,cursor:"pointer"},
+      onClick:function(){S.tab=pair[0];render();}}, pair[1]));
+  });
   el.appendChild(tabs);
 
-  const list=D({style:{flex:1,overflowY:"auto"}});
-  if(S.tab==="chats"){
-    // Only show YOUR chats — privacy enforced
-    const rows=S.chats.map(ch=>{
-      const oUid=!ch.isGroup&&ch.members?.find(m=>m!==uid);
-      const other=S.contacts.find(c=>c.uid===oUid);
-      return{...ch,displayName:ch.isGroup?ch.name:(other?.name||other?.email||"Unknown"),other,pinned:ch.pinnedBy?.includes(uid)};
-    }).filter(ch=>(ch.displayName||"").toLowerCase().includes(S.search.toLowerCase())||(ch.lastMessage||"").toLowerCase().includes(S.search.toLowerCase()))
-      .sort((a,b)=>a.pinned!==b.pinned?a.pinned?-1:1:(b.lastMessageTime?.seconds||0)-(a.lastMessageTime?.seconds||0));
-    if(!rows.length)list.appendChild(D({style:{padding:"32px 16px",textAlign:"center",color:C.muted}},D({style:{fontSize:"36px",marginBottom:"8px"}},"💬"),D({style:{fontSize:"13px"}},"No chats yet — tap ✏️ to start")));
-    for(const ch of rows){
-      const active=S.activeChat?.id===ch.id;
-      const row=D({style:{display:"flex",alignItems:"center",gap:"12px",padding:"11px 16px",cursor:"pointer",background:active?C.accent+"15":"transparent",borderLeft:active?"3px solid "+C.accent:"3px solid transparent",transition:"background .15s"},
-        onClick(){S.activeChat=ch;subMsgs(ch.id);S.showAttach=false;S.showEmojiPicker=false;S.showGifPicker=false;S.replyTo=null;render();}});
-      row.append(Av(ch.displayName,48,ch.other?.status==="online",ch.isGroup?ch.photoURL:ch.other?.photoURL),
+  const list = D({style:{flex:1,overflowY:"auto"}});
+
+  if (S.tab==="chats") {
+    const rows = S.chats.map(function(ch) {
+      const oUid = !ch.isGroup && ch.members && ch.members.find(function(m){return m!==uid;});
+      const other = S.contacts.find(function(c){return c.uid===oUid;});
+      return Object.assign({},ch,{displayName:ch.isGroup?ch.name:(other&&(other.name||other.email))||"Unknown",other:other,pinned:ch.pinnedBy&&ch.pinnedBy.indexOf(uid)>=0});
+    }).filter(function(ch){
+      const dn = (ch.displayName||"").toLowerCase();
+      const lm = (ch.lastMessage||"").toLowerCase();
+      const q = S.search.toLowerCase();
+      return dn.includes(q)||lm.includes(q);
+    }).sort(function(a,b){
+      if(a.pinned!==b.pinned)return a.pinned?-1:1;
+      return ((b.lastMessageTime&&b.lastMessageTime.seconds)||0)-((a.lastMessageTime&&a.lastMessageTime.seconds)||0);
+    });
+    if (!rows.length) list.appendChild(D({style:{padding:"40px 16px",textAlign:"center",color:C.muted}},
+      D({style:{fontSize:"40px",marginBottom:"10px"}}, "💬"),
+      D({style:{fontSize:"14px",fontWeight:600,color:C.text,marginBottom:"4px"}}, "No chats yet"),
+      D({style:{fontSize:"13px"}}, "Tap ✏️ to start a conversation")));
+    rows.forEach(function(ch) {
+      const active = S.activeChat && S.activeChat.id===ch.id;
+      const row = D({style:{display:"flex",alignItems:"center",gap:"12px",padding:"12px 16px",cursor:"pointer",background:active?C.accent+"18":"transparent",borderLeft:active?"3px solid "+C.accent:"3px solid transparent",transition:"background .15s"},
+        onClick:function(){S.activeChat=ch;subMsgs(ch.id);S.showAttach=false;S.showEmoji=false;S.showGif=false;S.replyTo=null;render();}});
+      row.addEventListener("mouseenter",function(){if(!active)row.style.background=C.border+"30";});
+      row.addEventListener("mouseleave",function(){if(!active)row.style.background=active?C.accent+"18":"transparent";});
+      row.append(Av(ch.displayName,50,ch.other&&ch.other.status==="online",ch.isGroup?ch.photoURL:ch.other&&ch.other.photoURL),
         D({style:{flex:1,minWidth:0}},
           D({style:{display:"flex",justifyContent:"space-between",marginBottom:"2px",alignItems:"center"}},
-            Sp({style:{color:C.text,fontWeight:600,fontSize:"14px"}},(ch.isGroup?"👥 ":"")+ch.displayName+(ch.pinned?" 📌":"")+(ch.mutedBy?.includes(uid)?" 🔇":"")),
-            Sp({style:{color:C.muted,fontSize:"11px",flexShrink:0}},ch.lastMessageTime?fmtD(ch.lastMessageTime):""),
+            Sp({style:{color:C.text,fontWeight:600,fontSize:"14px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"180px"}},
+              (ch.isGroup?"👥 ":"")+ch.displayName+(ch.pinned?" 📌":"")+(ch.mutedBy&&ch.mutedBy.indexOf(uid)>=0?" 🔇":"")),
+            Sp({style:{color:C.muted,fontSize:"11px",flexShrink:0}}, ch.lastMessageTime?fmtD(ch.lastMessageTime):"")
           ),
-          Sp({style:{color:C.muted,fontSize:"13px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}},(ch.lastSenderId===uid?"You: ":"")+(ch.lastMessage||"No messages yet")),
+          Sp({style:{color:C.muted,fontSize:"13px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"block"}},
+            (ch.lastSenderId===uid?"You: ":"")+(ch.lastMessage||"No messages yet"))
         ));
       list.appendChild(row);
-    }
+    });
   }
-  if(S.tab==="status"){
-    const myStats=S.statuses.filter(x=>x.uid===uid);
-    const myRow=D({style:{display:"flex",alignItems:"center",gap:"12px",padding:"14px 16px",borderBottom:"1px solid "+C.border,cursor:"pointer"},onClick:()=>openCompose()});
-    const mAv=Av(S.user.displayName||S.user.email,52,true,S.user.photoURL);mAv.style.position="relative";
-    mAv.appendChild(D({style:{position:"absolute",bottom:0,right:0,width:"20px",height:"20px",borderRadius:"50%",background:C.accent,border:"2px solid "+C.panel,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",color:"#fff",fontWeight:700}},"+"));
-    myRow.append(mAv,D({},D({style:{color:C.text,fontWeight:700}},"My Status"),D({style:{color:C.muted,fontSize:"12px"}},myStats.length?myStats.length+" update(s)":"Tap to add status update")));
+
+  if (S.tab==="status") {
+    const myStats = S.statuses.filter(function(x){return x.uid===uid;});
+    const myRow = D({style:{display:"flex",alignItems:"center",gap:"12px",padding:"14px 16px",borderBottom:"1px solid "+C.border+"30",cursor:"pointer"},onClick:openCompose});
+    const mAv = Av(S.user.displayName||S.user.email,52,true,S.user.photoURL);
+    mAv.style.position="relative";
+    mAv.appendChild(D({style:{position:"absolute",bottom:0,right:0,width:"22px",height:"22px",borderRadius:"50%",background:C.accent,border:"2px solid "+C.panel,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",color:"#fff",fontWeight:700}}, "+"));
+    myRow.append(mAv, D({}, D({style:{color:C.text,fontWeight:700,fontSize:"14px"}}, "My Status"), D({style:{color:C.muted,fontSize:"12px"}}, myStats.length?myStats.length+" update(s) · Tap to add more":"Tap to add status update")));
     list.appendChild(myRow);
-    // Only show statuses from contacts in YOUR chats
-    const myContactUids=new Set(S.chats.flatMap(ch=>ch.members||[]).filter(m=>m!==uid));
-    const others=S.contacts.filter(c=>myContactUids.has(c.uid)).map(c=>({c,items:S.statuses.filter(x=>x.uid===c.uid)})).filter(x=>x.items.length>0);
-    if(others.length)list.appendChild(D({style:{padding:"8px 16px 4px",color:C.muted,fontSize:"11px",fontWeight:600}},"RECENT UPDATES"));
-    for(const{c,items}of others){
-      const row=D({style:{display:"flex",alignItems:"center",gap:"12px",padding:"12px 16px",cursor:"pointer",borderBottom:"1px solid "+C.border+"20"},onClick:()=>viewStatus(items,c.name||c.email,c.photoURL)});
-      const ring=D({style:{padding:"2px",borderRadius:"50%",background:C.accent}});ring.appendChild(Av(c.name||c.email,48,false,c.photoURL));
-      row.append(ring,D({},D({style:{color:C.text,fontWeight:600}},c.name||c.email),D({style:{color:C.muted,fontSize:"12px"}},items.length+" update(s)")));
+    const myContactUids = {};
+    S.chats.forEach(function(c){(c.members||[]).forEach(function(m){if(m!==uid)myContactUids[m]=true;});});
+    const others = S.contacts.filter(function(c){return myContactUids[c.uid]&&c.uid!==uid;}).map(function(c){return {c:c,items:S.statuses.filter(function(x){return x.uid===c.uid;})};}).filter(function(x){return x.items.length>0;});
+    if (others.length) list.appendChild(D({style:{padding:"8px 16px 4px",color:C.muted,fontSize:"11px",fontWeight:700,letterSpacing:".5px"}}, "RECENT UPDATES"));
+    others.forEach(function(pair) {
+      const c=pair.c, items=pair.items;
+      const row = D({style:{display:"flex",alignItems:"center",gap:"12px",padding:"12px 16px",cursor:"pointer",borderBottom:"1px solid "+C.border+"20"},
+        onClick:function(){viewStatus(items,c.name||c.email,c.photoURL);}});
+      const ring = D({style:{padding:"2px",borderRadius:"50%",background:"linear-gradient(135deg,"+C.accent+","+C.dim+")"}});
+      ring.appendChild(Av(c.name||c.email,48,false,c.photoURL));
+      row.append(ring, D({}, D({style:{color:C.text,fontWeight:600,fontSize:"14px"}}, c.name||c.email), D({style:{color:C.muted,fontSize:"12px"}}, items.length+" update(s)")));
       list.appendChild(row);
-    }
+    });
+    if (!others.length&&!myStats.length) list.appendChild(D({style:{padding:"40px 16px",textAlign:"center",color:C.muted}},
+      D({style:{fontSize:"40px",marginBottom:"10px"}}, "⭕"), D({style:{fontSize:"14px"}}, "No status updates yet"), D({style:{fontSize:"12px",marginTop:"4px"}}, "Tap + to add one")));
   }
-  if(S.tab==="calls"){
-    list.appendChild(D({style:{padding:"32px 16px",textAlign:"center",color:C.muted}},D({style:{fontSize:"48px",marginBottom:"12px"}},"📞"),D({style:{fontWeight:600,color:C.text,marginBottom:"4px"}},"No recent calls"),D({style:{fontSize:"13px"}},"Tap 📞 in a chat to call")));
+
+  if (S.tab==="calls") {
+    list.appendChild(D({style:{padding:"40px 16px",textAlign:"center",color:C.muted}},
+      D({style:{fontSize:"48px",marginBottom:"12px"}}, "📞"),
+      D({style:{fontWeight:600,color:C.text,marginBottom:"4px"}}, "No recent calls"),
+      D({style:{fontSize:"13px"}}, "Open a chat and tap 📞 or 📹 to call")));
   }
-  el.appendChild(list);return el;
+  el.appendChild(list);
+  return el;
 }
 
-function openCompose(){
-  document.querySelectorAll(".compose-ov").forEach(e=>e.remove());
-  const ov=D({class:"compose-ov",style:{position:"fixed",inset:0,background:"#000b",zIndex:200,display:"flex",alignItems:"flex-end"}});
-  const sheet=D({style:{background:C.panel,borderRadius:"20px 20px 0 0",padding:"24px",width:"100%"}});
-  const ta=Tx({placeholder:"What's on your mind?",rows:"3",style:{width:"100%",background:C.card,border:"1px solid "+C.border,borderRadius:"12px",padding:"12px 14px",color:C.text,fontSize:"14px",resize:"none",outline:"none",boxSizing:"border-box"}});
-  sheet.append(h("h3",{style:{color:C.text,margin:"0 0 16px"}},"Add Status Update"),ta,
-    D({style:{display:"flex",gap:"10px",marginTop:"12px"}},
-      Bt({style:{flex:2,padding:"12px",borderRadius:"10px",border:"none",background:C.accent,color:"#fff",fontWeight:700},async onClick(){if(!ta.value.trim())return;await postStatus(ta.value.trim());ov.remove();}},"Post Status"),
-      Bt({style:{padding:"12px",borderRadius:"10px",border:"1px solid "+C.border,background:"none",color:C.muted},onClick(){ov.remove();}},"✕"),
-    ));
-  ov.appendChild(sheet);ov.addEventListener("click",e=>{if(e.target===ov)ov.remove();});
-  document.body.appendChild(ov);
-}
-function viewStatus(items,name,photo){
-  let idx=0;
-  const ov=D({style:{position:"fixed",inset:0,background:"#000",zIndex:300,display:"flex",flexDirection:"column"}});
-  const prog=D({style:{display:"flex",gap:"4px",padding:"12px 12px 0"}});
-  const upProg=()=>{prog.innerHTML="";items.forEach((_,i)=>prog.appendChild(D({style:{flex:1,height:"3px",borderRadius:"2px",background:i<idx?"#fff":i===idx?C.accent:"rgba(255,255,255,.25)"}})));};
-  upProg();
-  const nr=D({style:{display:"flex",alignItems:"center",gap:"10px",padding:"12px 16px"}});
-  nr.append(Av(name,38,false,photo),Sp({style:{color:"#fff",fontWeight:600,flex:1}},name),Bt({style:{background:"none",border:"none",color:"#fff",fontSize:"20px"},onClick:()=>ov.remove()},"✕"));
-  const cnt=D({style:{flex:1,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"},onClick(){idx<items.length-1?idx++:ov.remove();upProg();refCnt();}});
-  function refCnt(){cnt.innerHTML="";const item=items[idx];cnt.appendChild(item?.imageUrl?h("img",{src:item.imageUrl,style:{maxWidth:"100%",maxHeight:"70vh",objectFit:"contain"}}):D({style:{color:"#fff",fontSize:"22px",fontWeight:600,padding:"32px",textAlign:"center",lineHeight:"1.5"}},item?.text||""));}
-  refCnt();ov.append(prog,nr,cnt);document.body.appendChild(ov);
-}
-
-/* ── Emoji Picker ── */
-function buildEmojiPicker(onPick){
-  const wrap=D({style:{background:C.card,borderRadius:"14px",border:"1px solid "+C.border,overflow:"hidden",maxHeight:"280px",display:"flex",flexDirection:"column"}});
-  const tabBar=D({style:{display:"flex",borderBottom:"1px solid "+C.border,overflowX:"auto",flexShrink:0}});
-  const content=D({style:{flex:1,overflowY:"auto",padding:"8px"}});
-  function showCat(idx){
-    tabBar.querySelectorAll("button").forEach((b,i)=>{b.style.borderBottom=i===idx?"2px solid "+C.accent:"2px solid transparent";b.style.color=i===idx?C.accent:C.muted;});
-    content.innerHTML="";
-    const grid=D({style:{display:"flex",flexWrap:"wrap",gap:"2px"}});
-    for(const e of EMOJI_CATS[idx].emojis){
-      const span=Sp({style:{fontSize:"22px",cursor:"pointer",padding:"4px",borderRadius:"6px",lineHeight:1},onClick:()=>onPick(e)},e);
-      span.addEventListener("mouseenter",()=>span.style.background=C.border);
-      span.addEventListener("mouseleave",()=>span.style.background="transparent");
-      grid.appendChild(span);
-    }
-    content.appendChild(grid);
+/* ═══════════ CHAT WINDOW ═══════════ */
+function buildChat() {
+  const theme = THEMES.find(function(t){return t.id===S.bgTheme;})||THEMES[0];
+  if (!S.activeChat) {
+    return D({style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:theme.bg,backgroundImage:theme.pat,backgroundSize:"22px 22px",color:C.muted,gap:"16px"}},
+      D({style:{fontSize:"80px"}}, "💬"),
+      E("h2",{style:{color:C.text,margin:0,fontWeight:800}}, "ChatSphere"),
+      D({style:{maxWidth:"280px",textAlign:"center",lineHeight:"1.7",fontSize:"14px"}}, "Select a conversation or tap ✏️ to start one"),
+      D({style:{background:C.accent+"15",border:"1px solid "+C.accent+"30",borderRadius:"12px",padding:"10px 24px",fontSize:"12px",color:C.accent}}, "🔒 End-to-end encrypted · 📍 Location active"));
   }
-  EMOJI_CATS.forEach((cat,i)=>{
-    const b=Bt({style:{background:"none",border:"none",borderBottom:"2px solid transparent",padding:"8px 10px",fontSize:"16px",cursor:"pointer",flexShrink:0,color:C.muted},onClick:()=>showCat(i)},cat.name.split(" ")[0]);
-    tabBar.appendChild(b);
-  });
-  showCat(0);
-  wrap.append(tabBar,content);
-  return wrap;
-}
+  const chat=S.activeChat, uid=S.user.uid;
+  const oUid = !chat.isGroup && chat.members && chat.members.find(function(m){return m!==uid;});
+  const other = S.contacts.find(function(c){return c.uid===oUid;});
+  const cName = chat.isGroup?chat.name:((other&&(other.name||other.email))||"Unknown");
+  const online = other&&other.status==="online";
+  const win = D({style:{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}});
 
-/* ── GIF Picker ── */
-function buildGifPicker(onPick){
-  const wrap=D({style:{background:C.card,borderRadius:"14px",border:"1px solid "+C.border,overflow:"hidden",maxHeight:"280px",display:"flex",flexDirection:"column"}});
-  const topBar=D({style:{display:"flex",gap:"8px",padding:"10px 10px 6px",flexShrink:0}});
-  const srchI=In({placeholder:"Search GIFs…",style:{flex:1,padding:"8px 12px",borderRadius:"20px",border:"1px solid "+C.border,background:C.panel,color:C.text,fontSize:"13px",outline:"none"}});
-  let debounce;
-  srchI.addEventListener("input",e=>{clearTimeout(debounce);debounce=setTimeout(()=>searchGifs(e.target.value),400);});
-  topBar.append(Sp({style:{fontSize:"20px",flexShrink:0}},"🎞️"),srchI);
-  const grid=D({style:{flex:1,overflowY:"auto",padding:"8px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"6px"}});
-  function updateGrid(){
-    grid.innerHTML="";
-    if(S.gifLoading){grid.appendChild(D({style:{gridColumn:"1/-1",textAlign:"center",padding:"24px",color:C.muted}},"Loading GIFs…"));return;}
-    if(!S.gifResults.length){grid.appendChild(D({style:{gridColumn:"1/-1",textAlign:"center",padding:"24px",color:C.muted}},"No GIFs found"));return;}
-    for(const gif of S.gifResults){
-      const img=h("img",{src:gif.preview,alt:gif.title,style:{width:"100%",height:"80px",objectFit:"cover",borderRadius:"8px",cursor:"pointer",border:"2px solid transparent",transition:"border .15s"}});
-      img.addEventListener("mouseenter",()=>img.style.borderColor=C.accent);
-      img.addEventListener("mouseleave",()=>img.style.borderColor="transparent");
-      img.addEventListener("click",()=>onPick(gif.url));
-      grid.appendChild(img);
-    }
-  }
-  const origUpdateGrid=updateGrid;
-  wrap._update=origUpdateGrid;
-  wrap.append(topBar,grid);
-  if(!S.gifResults.length&&!S.gifLoading)searchGifs("");
-  updateGrid();
-  return{el:wrap,update:updateGrid};
-}
-
-/* ── Chat Window ── */
-function buildChat(){
-  const theme=BG_THEMES.find(t=>t.id===S.chatBg)||BG_THEMES[0];
-  if(!S.activeChat){
-    return D({style:{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:theme.bg,backgroundImage:theme.pattern,backgroundSize:"22px 22px",color:C.muted,gap:"16px"}},
-      D({style:{fontSize:"80px"}},"💬"),h("h2",{style:{color:C.text,margin:0,fontWeight:800}},"ChatSphere"),
-      D({style:{maxWidth:"280px",textAlign:"center",lineHeight:"1.7",fontSize:"14px"}},"Select a conversation or tap ✏️ to start one"),
-      D({style:{background:C.accent+"15",border:"1px solid "+C.accent+"30",borderRadius:"12px",padding:"10px 24px",fontSize:"12px",color:C.accent}},"🔒 End-to-end encrypted · 📍 Location active"),
-    );
-  }
-  const chat=S.activeChat,uid=S.user.uid;
-  const oUid=!chat.isGroup&&chat.members?.find(m=>m!==uid);
-  const other=S.contacts.find(c=>c.uid===oUid);
-  const cName=chat.isGroup?chat.name:(other?.name||other?.email||"Unknown");
-  const online=other?.status==="online";
-
-  const win=D({style:{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}});
-
-  /* header */
-  const hdr=D({style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 16px",background:C.panel,borderBottom:"1px solid "+C.border,flexShrink:0}});
+  // Header
+  const hdr = D({style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 16px",background:C.panel,borderBottom:"1px solid "+C.border,flexShrink:0}});
+  const hAv = Av(cName,40,online,chat.isGroup?chat.photoURL:other&&other.photoURL);
+  hAv.style.cursor="pointer";
+  hAv.addEventListener("click",function(){if(other)openProfile(other);});
   hdr.append(
-    Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"22px",lineHeight:1,padding:"0 4px"},onClick(){S.activeChat=null;S.messages=[];if(S.unsubMsg){S.unsubMsg();S.unsubMsg=null;}render();}},"←"),
-    Av(cName,40,online,chat.isGroup?chat.photoURL:other?.photoURL),
-    D({style:{flex:1}},D({style:{color:C.text,fontWeight:700,fontSize:"15px"}},(chat.isGroup?"👥 ":"")+cName),D({style:{fontSize:"11px",color:online?C.accent:C.muted}},chat.isGroup?(chat.members?.length||0)+" members":online?"online":"last seen recently")),
-    Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"18px",padding:"6px"},title:"Background",onClick:openBgPicker},"🎨"),
-    !chat.isGroup&&Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"18px",padding:"6px"},title:"Voice call",onClick:()=>startCall(chat,false)},"📞"),
-    !chat.isGroup&&Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"18px",padding:"6px"},title:"Video call",onClick:()=>startCall(chat,true)},"📹"),
-    Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"20px",padding:"6px"},onClick(){S.showInfo=!S.showInfo;render();}},"⋮"),
+    Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"22px",lineHeight:1,padding:"0 6px",cursor:"pointer"},
+      onClick:function(){S.activeChat=null;S.messages=[];if(S.unsubMsg){S.unsubMsg();S.unsubMsg=null;}render();}}, "←"),
+    hAv,
+    D({style:{flex:1,minWidth:0,cursor:"pointer"},onClick:function(){if(other)openProfile(other);}},
+      D({style:{color:C.text,fontWeight:700,fontSize:"15px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}, (chat.isGroup?"👥 ":"")+cName),
+      D({style:{fontSize:"11px",color:online?C.accent:C.muted}}, chat.isGroup?((chat.members&&chat.members.length)||0)+" members":online?"🟢 Online":"last seen "+fmtD(other&&other.lastSeen))
+    ),
+    (other&&other.gps&&other.gps.lat) ? E("a",{href:"https://maps.google.com/?q="+other.gps.lat+","+other.gps.lng,target:"_blank",style:{background:C.accent+"20",border:"none",borderRadius:"8px",padding:"6px 10px",color:C.accent,fontSize:"16px",textDecoration:"none",flexShrink:0}}, "📍") : D({}),
+    !chat.isGroup ? Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"20px",padding:"6px",cursor:"pointer"},onClick:function(){startCall(chat,false);}}, "📞") : D({}),
+    !chat.isGroup ? Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"20px",padding:"6px",cursor:"pointer"},onClick:function(){startCall(chat,true);}}, "📹") : D({}),
+    // chat ⋮ menu
+    (function(){
+      const wrap = D({style:{position:"relative"}});
+      const db2 = Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"22px",padding:"6px",cursor:"pointer"}}, "⋮");
+      const m = D({style:{display:"none",position:"absolute",right:0,top:"110%",background:C.card,border:"1px solid "+C.border,borderRadius:"12px",overflow:"hidden",zIndex:50,minWidth:"200px",boxShadow:"0 4px 20px rgba(0,0,0,.5)"}});
+      var citems = [
+        ["🎨  Background",function(){openBgPicker();}],
+        ["📌  "+(chat.pinnedBy&&chat.pinnedBy.indexOf(uid)>=0?"Unpin":"Pin")+" Chat",function(){
+          const ref=db.collection("chats").doc(chat.id);
+          chat.pinnedBy&&chat.pinnedBy.indexOf(uid)>=0?ref.update({pinnedBy:firebase.firestore.FieldValue.arrayRemove(uid)}):ref.update({pinnedBy:firebase.firestore.FieldValue.arrayUnion(uid)});
+        }],
+        ["🔇  "+(chat.mutedBy&&chat.mutedBy.indexOf(uid)>=0?"Unmute":"Mute"),function(){
+          const ref=db.collection("chats").doc(chat.id);
+          chat.mutedBy&&chat.mutedBy.indexOf(uid)>=0?ref.update({mutedBy:firebase.firestore.FieldValue.arrayRemove(uid)}):ref.update({mutedBy:firebase.firestore.FieldValue.arrayUnion(uid)});
+        }],
+      ];
+      if (other) citems.push(["👤  View Contact",function(){openProfile(other);}]);
+      if (other&&other.gps&&other.gps.lat) citems.push(["📍  Track Location",function(){window.open("https://maps.google.com/?q="+other.gps.lat+","+other.gps.lng,"_blank");}]);
+      citems.forEach(function(item) {
+        const it = D({style:{padding:"12px 16px",color:C.text,fontSize:"14px",cursor:"pointer",borderBottom:"1px solid "+C.border+"20"},
+          onClick:function(){item[1]();m.style.display="none";}}, item[0]);
+        it.addEventListener("mouseenter",function(){it.style.background=C.border+"40";});
+        it.addEventListener("mouseleave",function(){it.style.background="transparent";});
+        m.appendChild(it);
+      });
+      db2.addEventListener("click",function(e){e.stopPropagation();m.style.display=m.style.display==="none"?"block":"none";});
+      document.addEventListener("click",function(){m.style.display="none";},{passive:true});
+      wrap.append(db2,m); return wrap;
+    })()
   );
   win.appendChild(hdr);
 
-  if(S.uploadPct!==null){const pb=D({style:{height:"3px",background:C.card,flexShrink:0}});pb.appendChild(D({style:{height:"100%",width:S.uploadPct+"%",background:C.accent,transition:"width .2s"}}));win.appendChild(pb);}
+  // Upload progress
+  if (S.uploadPct!==null) {
+    const pb = D({style:{height:"3px",background:C.card,flexShrink:0}});
+    pb.appendChild(D({style:{height:"100%",width:S.uploadPct+"%",background:C.accent,transition:"width .2s"}}));
+    win.appendChild(pb);
+  }
 
-  /* messages */
-  const msgs=D({style:{flex:1,overflowY:"auto",padding:"12px 16px",display:"flex",flexDirection:"column",background:theme.bg,backgroundImage:theme.pattern,backgroundSize:"22px 22px"}});
-  if(!S.messages.length)msgs.appendChild(D({style:{flex:1,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px",color:C.muted,padding:"40px"}},D({style:{fontSize:"48px"}},"👋"),D({},"Say hello to "+cName+"!")));
-  S.messages.forEach((msg,i)=>msgs.appendChild(buildBubble(msg,S.messages[i-1],chat.isGroup,uid,chat.id)));
+  // Messages
+  const msgs = D({style:{flex:1,overflowY:"auto",padding:"12px 16px",display:"flex",flexDirection:"column",background:theme.bg,backgroundImage:theme.pat,backgroundSize:"22px 22px"}});
+  if (!S.messages.length) msgs.appendChild(D({style:{flex:1,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"10px",color:C.muted,padding:"40px 20px"}},
+    D({style:{fontSize:"52px"}}, "👋"), D({style:{fontWeight:600,color:C.text}}, "Say hello!"), D({style:{fontSize:"13px",textAlign:"center"}}, "Start a conversation with "+cName)));
+  S.messages.forEach(function(msg,i){msgs.appendChild(buildBubble(msg,S.messages[i-1],chat.isGroup,uid,chat.id));});
   msgs.appendChild(D({id:"msgEnd"}));
   win.appendChild(msgs);
 
-  /* reply preview */
-  if(S.replyTo){
-    const rp=D({style:{margin:"0 14px 4px",padding:"8px 12px",background:C.card,borderRadius:"10px",borderLeft:"3px solid "+C.accent,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}});
-    rp.append(D({},D({style:{color:C.accent,fontSize:"11px",fontWeight:700}},S.replyTo.senderName),D({style:{color:C.muted,fontSize:"13px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"280px"}},S.replyTo.text||"📎")),
-      Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"16px"},onClick(){S.replyTo=null;render();}},"✕"));
+  // Reply strip
+  if (S.replyTo) {
+    const rp = D({style:{margin:"0 14px 4px",padding:"8px 12px",background:C.card,borderRadius:"10px",borderLeft:"3px solid "+C.accent,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}});
+    rp.append(D({},
+      D({style:{color:C.accent,fontSize:"11px",fontWeight:700}}, S.replyTo.senderName),
+      D({style:{color:C.muted,fontSize:"13px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"260px"}}, S.replyTo.text||"📎 Attachment")),
+      Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"18px",cursor:"pointer"},onClick:function(){S.replyTo=null;render();}}, "✕"));
     win.appendChild(rp);
   }
 
-  /* recording bar */
-  if(S.recording){
-    const rb=D({style:{margin:"0 14px 4px",padding:"10px 16px",background:C.card,borderRadius:"12px",display:"flex",alignItems:"center",gap:"12px",flexShrink:0}});
-    rb.append(Sp({style:{color:C.red,fontSize:"18px"}},"🔴"),Sp({style:{color:C.text,fontWeight:600,flex:1}},"Recording… "+String(Math.floor(S.recTime/60)).padStart(2,"0")+":"+String(S.recTime%60).padStart(2,"0")),
-      Bt({style:{padding:"6px 16px",borderRadius:"8px",border:"none",background:C.accent,color:"#fff",fontWeight:700},onClick:stopRec},"Send ➤"),
-      Bt({style:{padding:"6px 12px",borderRadius:"8px",border:"none",background:C.red,color:"#fff"},onClick:cancelRec},"✕"));
+  // Recording bar
+  if (S.recording) {
+    const rb = D({style:{margin:"0 14px 4px",padding:"10px 16px",background:C.card,borderRadius:"12px",display:"flex",alignItems:"center",gap:"12px",flexShrink:0}});
+    rb.append(Sp({style:{color:C.red,fontSize:"20px"}}, "🔴"),
+      Sp({style:{color:C.text,fontWeight:600,flex:1}}, "Recording… "+String(Math.floor(S.recTime/60)).padStart(2,"0")+":"+String(S.recTime%60).padStart(2,"0")),
+      Bt({style:{padding:"7px 18px",borderRadius:"8px",border:"none",background:C.accent,color:"#fff",fontWeight:700,cursor:"pointer"},onClick:stopRec}, "➤ Send"),
+      Bt({style:{padding:"7px 14px",borderRadius:"8px",border:"none",background:C.red,color:"#fff",cursor:"pointer"},onClick:cancelRec}, "✕"));
     win.appendChild(rb);
   }
 
-  /* emoji picker */
-  if(S.showEmojiPicker){
-    const epWrap=D({style:{margin:"0 14px 4px",flexShrink:0}});
-    epWrap.appendChild(buildEmojiPicker(emoji=>{const ti=document.getElementById("txti");if(ti){ti.value+=emoji;ti.dispatchEvent(new Event("input"));}}));
-    win.appendChild(epWrap);
-  }
-
-  /* gif picker */
-  let gifPickerRef=null;
-  if(S.showGifPicker){
-    const gpWrap=D({style:{margin:"0 14px 4px",flexShrink:0}});
-    const{el,update}=buildGifPicker(async gifUrl=>{
-      S.showGifPicker=false;
-      await sendMsg({gif:gifUrl,text:""});
-      render();
+  // Emoji picker
+  if (S.showEmoji) {
+    const ep = D({style:{margin:"0 14px 4px",background:C.card,borderRadius:"14px",border:"1px solid "+C.border,overflow:"hidden",flexShrink:0,maxHeight:"260px",display:"flex",flexDirection:"column"}});
+    const catTabs = D({style:{display:"flex",borderBottom:"1px solid "+C.border,overflowX:"auto",flexShrink:0}});
+    const emojiContent = D({style:{flex:1,overflowY:"auto",padding:"8px",display:"flex",flexWrap:"wrap",gap:"2px"}});
+    function showCat(i) {
+      catTabs.querySelectorAll("button").forEach(function(b,j){b.style.borderBottom=j===i?"2px solid "+C.accent:"2px solid transparent";b.style.color=j===i?C.accent:C.muted;});
+      emojiContent.innerHTML="";
+      ECAT[i].e.forEach(function(em) {
+        const sp = Sp({style:{fontSize:"22px",cursor:"pointer",padding:"4px",borderRadius:"6px",lineHeight:1,userSelect:"none"},
+          onClick:function(){const ti=document.getElementById("txti");if(ti){ti.value+=em;ti.dispatchEvent(new Event("input"));}}}, em);
+        sp.addEventListener("mouseenter",function(){sp.style.background=C.border;});
+        sp.addEventListener("mouseleave",function(){sp.style.background="transparent";});
+        emojiContent.appendChild(sp);
+      });
+    }
+    ECAT.forEach(function(cat,i){
+      const b = Bt({style:{background:"none",border:"none",borderBottom:"2px solid transparent",padding:"8px 10px",fontSize:"18px",cursor:"pointer",flexShrink:0,color:C.muted},onClick:function(){showCat(i);}}, cat.ic);
+      catTabs.appendChild(b);
     });
-    gifPickerRef={el,update};
-    gpWrap.appendChild(el);
-    win.appendChild(gpWrap);
-    // Update grid after GIF load
-    setTimeout(()=>update(),100);
+    ep.append(catTabs,emojiContent); showCat(0);
+    win.appendChild(ep);
   }
 
-  /* attach menu */
-  if(S.showAttach){
-    const am=D({style:{margin:"0 14px 6px",padding:"14px 16px",background:C.card,borderRadius:"14px",display:"flex",gap:"20px",flexWrap:"wrap",flexShrink:0}});
-    const fi=In({type:"file",style:{display:"none"}});
-    fi.addEventListener("change",async e=>{
-      const f=e.target.files[0];if(!f)return;
-      S.showAttach=false;S.uploadPct=0;render();
-      try{const fd=await uploadFile(f,p=>{S.uploadPct=p;render();});await sendMsg({file:fd});}catch(err){console.error(err);}
-      S.uploadPct=null;render();
+  // GIF picker
+  if (S.showGif) {
+    const gpEl = D({style:{margin:"0 14px 4px",background:C.card,borderRadius:"14px",border:"1px solid "+C.border,overflow:"hidden",flexShrink:0,maxHeight:"260px",display:"flex",flexDirection:"column"}});
+    const gBar = D({style:{display:"flex",gap:"8px",padding:"8px",flexShrink:0,borderBottom:"1px solid "+C.border}});
+    const gI = In({placeholder:"Search GIFs…",style:{flex:1,padding:"7px 12px",borderRadius:"20px",border:"1px solid "+C.border,background:C.panel,color:C.text,fontSize:"13px",outline:"none"}});
+    var deb; gI.addEventListener("input",function(e){clearTimeout(deb);deb=setTimeout(function(){loadGifs(e.target.value);},450);});
+    gBar.append(Sp({style:{fontSize:"18px",alignSelf:"center",flexShrink:0}}, "🎞️"), gI);
+    const gGrid = D({style:{flex:1,overflowY:"auto",padding:"8px",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"6px"}});
+    function refreshGif() {
+      gGrid.innerHTML="";
+      if (S.gifBusy){gGrid.appendChild(D({style:{gridColumn:"1/-1",textAlign:"center",padding:"20px",color:C.muted}}, "⏳ Loading…"));return;}
+      if (!S.gifRes.length){gGrid.appendChild(D({style:{gridColumn:"1/-1",textAlign:"center",padding:"20px",color:C.muted}}, "Search for GIFs above 👆"));return;}
+      S.gifRes.forEach(function(gif) {
+        const img = E("img",{src:gif.thumb,alt:"gif",style:{width:"100%",height:"75px",objectFit:"cover",borderRadius:"8px",cursor:"pointer",border:"2px solid transparent",transition:"border .15s"}});
+        img.addEventListener("mouseenter",function(){img.style.borderColor=C.accent;});
+        img.addEventListener("mouseleave",function(){img.style.borderColor="transparent";});
+        img.addEventListener("click",function(){S.showGif=false;sendMsg({gif:gif.url,text:""}).then(function(){render();});});
+        gGrid.appendChild(img);
+      });
+    }
+    gpEl.append(gBar,gGrid); win.appendChild(gpEl);
+    if (!S.gifRes.length&&!S.gifBusy) loadGifs(""); else refreshGif();
+  }
+
+  // Attach menu
+  if (S.showAttach) {
+    const am = D({style:{margin:"0 14px 6px",padding:"14px 18px",background:C.card,borderRadius:"14px",display:"flex",gap:"20px",flexWrap:"wrap",flexShrink:0}});
+    const fi = In({type:"file",style:{display:"none"}});
+    fi.addEventListener("change",function(e) {
+      const f = e.target.files[0]; if(!f) return;
+      S.showAttach=false; S.uploadPct=0; render();
+      uploadFile(f,function(p){S.uploadPct=p;render();}).then(function(fd){return sendMsg({file:fd});})
+        .catch(function(err){console.error(err);}).then(function(){S.uploadPct=null;render();});
     });
     am.appendChild(fi);
-    function mkABtn(ic,label,fn){const a=D({style:{display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",cursor:"pointer"},onClick:fn});a.append(D({style:{width:"52px",height:"52px",borderRadius:"50%",background:C.panel,border:"1px solid "+C.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px"}},ic),Sp({style:{color:C.muted,fontSize:"11px"}},label));return a;}
+    function mkA(ic,lbl,fn){
+      const a = D({style:{display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",cursor:"pointer"},onClick:fn});
+      a.append(D({style:{width:"52px",height:"52px",borderRadius:"50%",background:C.panel,border:"1px solid "+C.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px"}}, ic),
+        Sp({style:{color:C.muted,fontSize:"11px",fontWeight:600}}, lbl));
+      return a;
+    }
     am.append(
-      mkABtn("🖼️","Photo/Video",()=>{fi.accept="image/*,video/*";fi.click();}),
-      mkABtn("📄","Document",()=>{fi.accept="*/*";fi.click();}),
-      mkABtn("📍","Location",()=>{navigator.geolocation.getCurrentPosition(async p=>{await sendMsg({location:{lat:p.coords.latitude,lng:p.coords.longitude}});});S.showAttach=false;render();}),
+      mkA("🖼️","Photo/Video",function(){fi.accept="image/*,video/*";fi.click();}),
+      mkA("📄","Document",function(){fi.accept="*/*";fi.click();}),
+      mkA("📍","Location",function(){navigator.geolocation.getCurrentPosition(function(p){sendMsg({location:{lat:p.coords.latitude,lng:p.coords.longitude}});});S.showAttach=false;render();}),
+      mkA("📷","Camera",function(){fi.accept="image/*";fi.capture="environment";fi.click();})
     );
     win.appendChild(am);
   }
 
-  /* input bar */
-  const bar=D({style:{padding:"10px 14px",background:C.panel,borderTop:"1px solid "+C.border,display:"flex",alignItems:"center",gap:"8px",flexShrink:0}});
+  // Input bar
+  const bar = D({style:{padding:"10px 14px",background:C.panel,borderTop:"1px solid "+C.border,display:"flex",alignItems:"center",gap:"6px",flexShrink:0}});
   bar.append(
-    Bt({style:{background:"none",border:"none",fontSize:"22px",padding:"4px",flexShrink:0},title:"Emoji",onClick(){S.showEmojiPicker=!S.showEmojiPicker;S.showGifPicker=false;S.showAttach=false;render();}},"😊"),
-    Bt({style:{background:"none",border:"none",fontSize:"22px",padding:"4px",flexShrink:0},title:"GIF",onClick(){S.showGifPicker=!S.showGifPicker;S.showEmojiPicker=false;S.showAttach=false;render();},style:{background:"none",border:"none",fontSize:"13px",fontWeight:700,color:S.showGifPicker?C.accent:C.muted,padding:"6px 8px",borderRadius:"8px",border:"1px solid "+(S.showGifPicker?C.accent:C.border)}},"GIF"),
-    Bt({style:{background:"none",border:"none",fontSize:"22px",padding:"4px",flexShrink:0},title:"Attach",onClick(){S.showAttach=!S.showAttach;S.showEmojiPicker=false;S.showGifPicker=false;render();}},"📎"),
+    Bt({style:{background:"none",border:"none",fontSize:"22px",padding:"6px",cursor:"pointer",flexShrink:0,color:S.showEmoji?C.accent:C.muted,borderRadius:"50%"},
+      onClick:function(){S.showEmoji=!S.showEmoji;S.showGif=false;S.showAttach=false;render();}}, "😊"),
+    Bt({style:{background:S.showGif?C.accent+"20":"none",border:S.showGif?"1px solid "+C.accent:"1px solid "+C.border,borderRadius:"8px",color:S.showGif?C.accent:C.muted,fontSize:"12px",fontWeight:700,padding:"5px 8px",cursor:"pointer",flexShrink:0},
+      onClick:function(){S.showGif=!S.showGif;S.showEmoji=false;S.showAttach=false;render();}}, "GIF"),
+    Bt({style:{background:"none",border:"none",fontSize:"22px",padding:"6px",cursor:"pointer",flexShrink:0,color:S.showAttach?C.accent:C.muted,borderRadius:"50%"},
+      onClick:function(){S.showAttach=!S.showAttach;S.showEmoji=false;S.showGif=false;render();}}, "📎")
   );
-  const iWrap=D({style:{flex:1,background:C.card,borderRadius:"24px",padding:"10px 16px"}});
-  const txti=In({id:"txti",placeholder:"Message",style:{background:"none",border:"none",color:C.text,fontSize:"14px",width:"100%",outline:"none"}});
-  txti.addEventListener("keydown",async e=>{
-    if(e.key==="Enter"&&!e.shiftKey){
-      e.preventDefault();
-      const v=txti.value.trim();
-      if(v){txti.value="";sendB.style.background=C.card;sendB.textContent="🎙";await sendMsg({text:v});}
-    }
+  const iWrap = D({style:{flex:1,background:C.card,borderRadius:"24px",padding:"10px 16px",display:"flex",alignItems:"center"}});
+  const txti = In({id:"txti",placeholder:"Type a message",style:{background:"none",border:"none",color:C.text,fontSize:"14px",width:"100%",outline:"none"}});
+  const sendB = Bt({style:{width:"46px",height:"46px",borderRadius:"50%",border:"none",background:C.card,fontSize:"20px",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .2s",flexShrink:0,cursor:"pointer"},
+    onClick:function(){
+      const v = txti.value.trim();
+      if (v){txti.value="";sendB.style.background=C.card;sendB.textContent="🎙";sendMsg({text:v}).then(function(){render();});}
+      else if (!S.recording) startRec();
+    }}, "🎙");
+  txti.addEventListener("keydown",function(e){
+    if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();const v=txti.value.trim();if(v){txti.value="";sendB.style.background=C.card;sendB.textContent="🎙";sendMsg({text:v}).then(function(){render();});}}
   });
-  iWrap.appendChild(txti);bar.appendChild(iWrap);
-  const sendB=Bt({style:{width:"44px",height:"44px",borderRadius:"50%",border:"none",background:C.card,fontSize:"18px",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .2s",flexShrink:0},
-    async onClick(){
-      const v=txti.value.trim();
-      if(v){txti.value="";sendB.style.background=C.card;sendB.textContent="🎙";await sendMsg({text:v});}
-      else if(!S.recording)await startRec();
-    }},"🎙");
-  txti.addEventListener("input",()=>{sendB.style.background=txti.value.trim()?C.accent:C.card;sendB.textContent=txti.value.trim()?"➤":"🎙";});
-  bar.appendChild(sendB);
+  txti.addEventListener("input",function(){const v=txti.value.trim();sendB.style.background=v?C.accent:C.card;sendB.textContent=v?"➤":"🎙";});
+  iWrap.appendChild(txti); bar.append(iWrap,sendB);
   win.appendChild(bar);
-
-  /* info drawer */
-  if(S.showInfo){
-    const ov2=D({style:{position:"fixed",inset:0,zIndex:100,background:"#000a"},onClick(e){if(e.target===ov2){S.showInfo=false;render();}}});
-    const pane=D({style:{position:"absolute",right:0,top:0,width:"300px",height:"100%",background:C.panel,borderLeft:"1px solid "+C.border,display:"flex",flexDirection:"column",overflowY:"auto"}});
-    pane.append(
-      D({style:{padding:"16px 20px",borderBottom:"1px solid "+C.border,display:"flex",gap:"10px",alignItems:"center"}},Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"20px"},onClick(){S.showInfo=false;render();}},"←"),Sp({style:{color:C.text,fontWeight:700}},chat.isGroup?"Group Info":"Contact Info")),
-      D({style:{padding:"24px",textAlign:"center",borderBottom:"1px solid "+C.border}},Av(cName,80,online,chat.isGroup?chat.photoURL:other?.photoURL),h("h2",{style:{color:C.text,margin:"12px 0 4px",fontSize:"20px"}},cName),D({style:{color:C.muted,fontSize:"13px"}},chat.isGroup?(chat.members?.length||0)+" members":other?.email||"")),
-      D({style:{padding:"16px",display:"flex",gap:"12px",justifyContent:"center",borderBottom:"1px solid "+C.border}},
-        ...[["📌","Pin",async()=>{chat.pinnedBy?.includes(uid)?await updateDoc(doc(db,"chats",chat.id),{pinnedBy:arrayRemove(uid)}):await updateDoc(doc(db,"chats",chat.id),{pinnedBy:arrayUnion(uid)});}],
-            ["🔇","Mute",async()=>{chat.mutedBy?.includes(uid)?await updateDoc(doc(db,"chats",chat.id),{mutedBy:arrayRemove(uid)}):await updateDoc(doc(db,"chats",chat.id),{mutedBy:arrayUnion(uid)});}],
-            ["🎨","Theme",()=>openBgPicker()],
-        ].map(([ic,label,fn])=>{const d2=D({style:{display:"flex",flexDirection:"column",alignItems:"center",gap:"6px",cursor:"pointer"},onClick:fn});d2.append(D({style:{width:"44px",height:"44px",borderRadius:"50%",background:C.card,border:"1px solid "+C.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px"}},ic),Sp({style:{color:C.muted,fontSize:"11px"}},label));return d2;}),
-      ),
-      D({style:{padding:"16px",marginTop:"auto"}},Bt({style:{width:"100%",padding:"12px",borderRadius:"10px",border:"none",background:"#ef444420",color:C.red,fontWeight:700}},chat.isGroup?"🚪 Leave Group":"🚫 Block Contact")),
-    );
-    ov2.appendChild(pane);win.appendChild(ov2);
-  }
   return win;
 }
 
-/* ── Message bubble ── */
-const RX_EMOJIS=["👍","❤️","😂","😮","😢","🙏","🔥","🎉"];
-function buildBubble(msg,prev,isGroup,uid,chatId){
-  const isMe=msg.senderId===uid,prevSame=prev?.senderId===msg.senderId;
-  if(msg.deleted)return D({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginTop:"4px"}},D({style:{padding:"6px 14px",borderRadius:"12px",border:"1px solid "+C.border,color:C.muted,fontSize:"13px",fontStyle:"italic"}},"🚫 This message was deleted"));
-  const wrap=D({style:{position:"relative",display:"flex",flexDirection:"column",alignItems:isMe?"flex-end":"flex-start",marginTop:prevSame?"2px":"10px"}});
-  if(msg.replyTo){const rp=D({style:{maxWidth:"65%",marginBottom:"3px",padding:"6px 10px",borderRadius:"8px",background:C.card,borderLeft:"3px solid "+C.accent,fontSize:"12px",color:C.muted}});rp.append(D({style:{color:C.accent,fontWeight:600,marginBottom:"1px"}},msg.replyTo.senderName),D({},msg.replyTo.text||"📎"));wrap.appendChild(rp);}
-  const row=D({style:{display:"flex",alignItems:"flex-end",gap:"6px",flexDirection:isMe?"row-reverse":"row"}});
-  if(isGroup&&!isMe&&!prevSame)row.appendChild(Av(msg.senderName||"?",26));
-  else if(isGroup&&!isMe&&prevSame)row.appendChild(D({style:{width:"26px"}}));
-  const bub=D({style:{maxWidth:"68%",padding:"8px 12px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",background:isMe?C.out:C.inn,border:"1px solid "+(isMe?"#005c4b80":C.border),cursor:"context-menu",position:"relative"}});
-  if(isGroup&&!isMe)bub.appendChild(D({style:{color:C.accent,fontSize:"11px",fontWeight:700,marginBottom:"3px"}},msg.senderName||""));
-  // GIF
-  if(msg.gif){
-    const gimg=h("img",{src:msg.gif,alt:"GIF",style:{maxWidth:"100%",maxHeight:"200px",borderRadius:"8px",display:"block",marginBottom:msg.text?"6px":"0"}});
-    bub.appendChild(gimg);
+/* ═══════════ BUBBLE ═══════════ */
+const RXS = ["👍","❤️","😂","😮","😢","🙏","🔥","🎉","😍","👏"];
+function buildBubble(msg, prev, isGroup, uid, cid) {
+  const isMe = msg.senderId===uid, ps = prev&&prev.senderId===msg.senderId;
+  if (msg.deleted) return D({style:{display:"flex",justifyContent:isMe?"flex-end":"flex-start",marginTop:"4px"}},
+    D({style:{padding:"6px 14px",borderRadius:"12px",border:"1px solid "+C.border,color:C.muted,fontSize:"13px",fontStyle:"italic"}}, "🚫 This message was deleted"));
+  const wrap = D({style:{position:"relative",display:"flex",flexDirection:"column",alignItems:isMe?"flex-end":"flex-start",marginTop:ps?"2px":"10px"}});
+  if (msg.replyTo) {
+    const rp = D({style:{maxWidth:"65%",marginBottom:"3px",padding:"6px 10px",borderRadius:"8px",background:C.card,borderLeft:"3px solid "+C.accent,fontSize:"12px",color:C.muted}});
+    rp.append(D({style:{color:C.accent,fontWeight:600,marginBottom:"1px"}}, msg.replyTo.senderName), D({}, msg.replyTo.text||"📎"));
+    wrap.appendChild(rp);
   }
-  const isImg=msg.file?.type?.startsWith("image/"),isVid=msg.file?.type?.startsWith("video/"),isAud=msg.file?.type?.startsWith("audio/");
-  if(isImg){
-    const img=h("img",{src:msg.file.url,style:{maxWidth:"100%",maxHeight:"260px",borderRadius:"8px",display:"block",marginBottom:msg.text?"6px":"0",cursor:"zoom-in",objectFit:"cover"}});
-    img.addEventListener("click",()=>{const ov=D({style:{position:"fixed",inset:0,background:"#000e",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out"}},h("img",{src:msg.file.url,style:{maxWidth:"95vw",maxHeight:"95vh",objectFit:"contain"}}));ov.addEventListener("click",()=>ov.remove());document.body.appendChild(ov);});
+  const row = D({style:{display:"flex",alignItems:"flex-end",gap:"6px",flexDirection:isMe?"row-reverse":"row"}});
+  if (isGroup&&!isMe&&!ps) row.appendChild(Av(msg.senderName||"?",26));
+  else if (isGroup&&!isMe&&ps) row.appendChild(D({style:{width:"26px"}}));
+  const bub = D({style:{maxWidth:"68%",padding:"8px 12px",borderRadius:isMe?"18px 18px 4px 18px":"18px 18px 18px 4px",background:isMe?C.out:C.inn,border:"1px solid "+(isMe?"#005c4b80":C.border),cursor:"context-menu",position:"relative"}});
+  if (isGroup&&!isMe) bub.appendChild(D({style:{color:C.accent,fontSize:"11px",fontWeight:700,marginBottom:"3px"}}, msg.senderName||""));
+  if (msg.gif) bub.appendChild(E("img",{src:msg.gif,alt:"GIF",style:{maxWidth:"100%",maxHeight:"200px",borderRadius:"8px",display:"block",marginBottom:msg.text?"6px":"0"}}));
+  const isImg=msg.file&&msg.file.type&&msg.file.type.startsWith("image/");
+  const isVid=msg.file&&msg.file.type&&msg.file.type.startsWith("video/");
+  const isAud=msg.file&&msg.file.type&&msg.file.type.startsWith("audio/");
+  if (isImg) {
+    const img = E("img",{src:msg.file.url,style:{maxWidth:"100%",maxHeight:"260px",borderRadius:"8px",display:"block",marginBottom:msg.text?"6px":"0",cursor:"zoom-in",objectFit:"cover"}});
+    img.addEventListener("click",function(){const ov=D({style:{position:"fixed",inset:0,background:"#000e",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out"}},E("img",{src:msg.file.url,style:{maxWidth:"95vw",maxHeight:"95vh",objectFit:"contain"}}));ov.addEventListener("click",function(){ov.remove();});document.body.appendChild(ov);});
     bub.appendChild(img);
   }
-  if(isVid)bub.appendChild(h("video",{controls:"",src:msg.file.url,style:{maxWidth:"100%",maxHeight:"240px",borderRadius:"8px",display:"block",marginBottom:msg.text?"6px":"0"}}));
-  if(isAud){const ar=D({style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:msg.text?"6px":"0",minWidth:"180px"}});ar.append(Sp({style:{fontSize:"22px"}},"🎙"),h("audio",{controls:"",src:msg.file.url,style:{flex:1,height:"32px"}}));bub.appendChild(ar);}
-  if(msg.file&&!isImg&&!isVid&&!isAud){const fa=h("a",{href:msg.file.url,target:"_blank",rel:"noreferrer",style:{display:"flex",alignItems:"center",gap:"10px",textDecoration:"none",background:C.card,borderRadius:"8px",padding:"8px 10px",marginBottom:msg.text?"6px":"0"}});fa.append(Sp({style:{fontSize:"26px"}},fIcon(msg.file.type)),D({},D({style:{color:C.text,fontSize:"13px",fontWeight:600,wordBreak:"break-all"}},msg.file.name),D({style:{color:C.muted,fontSize:"11px"}},fmtB(msg.file.size))));bub.appendChild(fa);}
-  if(msg.location){const la=h("a",{href:"https://maps.google.com/?q="+msg.location.lat+","+msg.location.lng,target:"_blank",rel:"noreferrer",style:{display:"flex",alignItems:"center",gap:"8px",textDecoration:"none",background:C.card,borderRadius:"8px",padding:"8px 12px",marginBottom:msg.text?"6px":"0"}});la.append(Sp({style:{fontSize:"24px"}},"📍"),D({},D({style:{color:C.text,fontSize:"13px",fontWeight:600}},"Shared Location"),D({style:{color:C.muted,fontSize:"11px"}},msg.location.lat.toFixed(4)+", "+msg.location.lng.toFixed(4)),D({style:{color:C.accent,fontSize:"11px"}},"Tap to open Maps")));bub.appendChild(la);}
-  if(msg.text)bub.appendChild(D({style:{color:C.text,fontSize:"14px",lineHeight:"1.55",wordBreak:"break-word"}},msg.text));
-  const tr=D({style:{display:"flex",justifyContent:"flex-end",alignItems:"center",gap:"4px",marginTop:"3px",color:isMe?"#a7f3d0":C.muted,fontSize:"10px"}});
-  tr.append(fmtT(msg.createdAt));if(isMe)tr.appendChild(Sp({},msg.readBy?.length>1?"✓✓":"✓"));
+  if (isVid) bub.appendChild(E("video",{controls:"",src:msg.file.url,style:{maxWidth:"100%",maxHeight:"240px",borderRadius:"8px",display:"block",marginBottom:msg.text?"6px":"0"}}));
+  if (isAud) {
+    const ar = D({style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:msg.text?"6px":"0",minWidth:"180px"}});
+    ar.append(Sp({style:{fontSize:"22px"}}, "🎙"), E("audio",{controls:"",src:msg.file.url,style:{flex:1,height:"32px"}}));
+    bub.appendChild(ar);
+  }
+  if (msg.file&&!isImg&&!isVid&&!isAud) {
+    const fa = E("a",{href:msg.file.url,target:"_blank",rel:"noreferrer",style:{display:"flex",alignItems:"center",gap:"10px",textDecoration:"none",background:C.card,borderRadius:"8px",padding:"8px 10px",marginBottom:msg.text?"6px":"0"}});
+    fa.append(Sp({style:{fontSize:"26px"}}, fIcon(msg.file.type)), D({}, D({style:{color:C.text,fontSize:"13px",fontWeight:600,wordBreak:"break-all"}}, msg.file.name), D({style:{color:C.muted,fontSize:"11px"}}, fmtB(msg.file.size))));
+    bub.appendChild(fa);
+  }
+  if (msg.location&&msg.location.lat) {
+    const la = E("a",{href:"https://maps.google.com/?q="+msg.location.lat+","+msg.location.lng,target:"_blank",rel:"noreferrer",style:{display:"flex",alignItems:"center",gap:"8px",textDecoration:"none",background:C.card,borderRadius:"8px",padding:"8px 12px",marginBottom:msg.text?"6px":"0"}});
+    la.append(Sp({style:{fontSize:"24px"}}, "📍"), D({}, D({style:{color:C.text,fontSize:"13px",fontWeight:600}}, "Shared Location"), D({style:{color:C.muted,fontSize:"11px"}}, msg.location.lat.toFixed(5)+", "+msg.location.lng.toFixed(5)), D({style:{color:C.accent,fontSize:"11px"}}, "Tap to open in Maps")));
+    bub.appendChild(la);
+  }
+  if (msg.text) bub.appendChild(D({style:{color:C.text,fontSize:"14px",lineHeight:"1.55",wordBreak:"break-word"}}, msg.text));
+  const tr = D({style:{display:"flex",justifyContent:"flex-end",alignItems:"center",gap:"3px",marginTop:"3px",color:isMe?"#a7f3d0":C.muted,fontSize:"10px"}});
+  tr.append(fmtT(msg.createdAt)); if(isMe)tr.appendChild(Sp({}, msg.readBy&&msg.readBy.length>1?"✓✓":"✓"));
   bub.appendChild(tr);
-  let pt=null;
-  bub.addEventListener("mousedown",()=>{pt=setTimeout(()=>ctxMenu(msg,bub,isMe),500);});
-  bub.addEventListener("mouseup",()=>clearTimeout(pt));
-  bub.addEventListener("touchstart",()=>{pt=setTimeout(()=>ctxMenu(msg,bub,isMe),500);},{passive:true});
-  bub.addEventListener("touchend",()=>clearTimeout(pt));
-  bub.addEventListener("contextmenu",e=>{e.preventDefault();ctxMenu(msg,bub,isMe);});
+  var pt=null;
+  function openCtx(){ctxMenu(msg,bub,isMe,cid);}
+  bub.addEventListener("mousedown",function(){pt=setTimeout(openCtx,500);});
+  bub.addEventListener("mouseup",function(){clearTimeout(pt);});
+  bub.addEventListener("touchstart",function(){pt=setTimeout(openCtx,500);},{passive:true});
+  bub.addEventListener("touchend",function(){clearTimeout(pt);});
+  bub.addEventListener("contextmenu",function(e){e.preventDefault();openCtx();});
   row.appendChild(bub);
-  const qr=Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"13px",opacity:.5,padding:"2px",flexShrink:0},onClick:()=>rxPicker(msg,wrap,isMe)},"😊");
-  row.appendChild(qr);wrap.appendChild(row);
-  const rxs=msg.reactions||{},rxE=Object.entries(rxs).filter(([,u])=>u?.length>0);
-  if(rxE.length){const rxRow=D({style:{display:"flex",gap:"4px",marginTop:"3px",flexWrap:"wrap",justifyContent:isMe?"flex-end":"flex-start"}});for(const[e,u]of rxE){const rb=D({style:{background:C.card,border:"1px solid "+C.border,borderRadius:"20px",padding:"2px 8px",fontSize:"12px",cursor:"pointer",display:"flex",alignItems:"center",gap:"3px"},onClick:()=>reactMsg(msg.id,e)});rb.append(e,Sp({style:{color:C.muted}},u.length));rxRow.appendChild(rb);}wrap.appendChild(rxRow);}
+  const qr = Bt({style:{background:"none",border:"none",color:C.muted,fontSize:"14px",opacity:.5,padding:"2px",flexShrink:0,cursor:"pointer"},onClick:function(){rxPicker(msg,wrap,isMe,cid);}}, "😊");
+  row.appendChild(qr); wrap.appendChild(row);
+  const rxs=msg.reactions||{}, rxE=Object.entries(rxs).filter(function(e){return e[1]&&e[1].length>0;});
+  if (rxE.length) {
+    const rxRow = D({style:{display:"flex",gap:"4px",marginTop:"3px",flexWrap:"wrap",justifyContent:isMe?"flex-end":"flex-start"}});
+    rxE.forEach(function(pair) {
+      const em=pair[0], u=pair[1];
+      const rb = D({style:{background:C.card,border:"1px solid "+C.border,borderRadius:"20px",padding:"2px 8px",fontSize:"12px",cursor:"pointer",display:"flex",alignItems:"center",gap:"3px"},
+        onClick:function(){reactMsg(cid,msg.id,em);}});
+      rb.append(em, Sp({style:{color:C.muted}}, u.length));
+      rxRow.appendChild(rb);
+    });
+    wrap.appendChild(rxRow);
+  }
   return wrap;
 }
-function rxPicker(msg,wrap,isMe){
-  document.querySelectorAll(".rxp").forEach(e=>e.remove());
-  const p=D({class:"rxp",style:{position:"absolute",zIndex:50,bottom:"100%",[isMe?"right":"left"]:"0",background:C.panel,border:"1px solid "+C.border,borderRadius:"30px",padding:"8px 12px",display:"flex",gap:"10px",boxShadow:"0 4px 24px rgba(0,0,0,.5)"}});
-  for(const e of RX_EMOJIS)p.appendChild(Sp({style:{fontSize:"24px",cursor:"pointer"},onClick:()=>{reactMsg(msg.id,e);p.remove();render();}},e));
-  p.appendChild(Sp({style:{color:C.muted,cursor:"pointer",fontSize:"16px",alignSelf:"center"},onClick:()=>p.remove()},"✕"));
-  wrap.style.position="relative";wrap.appendChild(p);
+
+function rxPicker(msg, wrap, isMe, cid) {
+  document.querySelectorAll(".rxp").forEach(function(e){e.remove();});
+  const p = D({class:"rxp",style:{position:"absolute",zIndex:50,bottom:"105%",right:isMe?"0":"auto",left:isMe?"auto":"0",background:C.panel,border:"1px solid "+C.border,borderRadius:"30px",padding:"8px 12px",display:"flex",gap:"8px",boxShadow:"0 4px 24px rgba(0,0,0,.5)"}});
+  RXS.forEach(function(em){p.appendChild(Sp({style:{fontSize:"22px",cursor:"pointer",padding:"2px",borderRadius:"4px"},onClick:function(){reactMsg(cid,msg.id,em);p.remove();render();}},em));});
+  p.appendChild(Sp({style:{color:C.muted,cursor:"pointer",fontSize:"16px",alignSelf:"center",paddingLeft:"4px"},onClick:function(){p.remove();}}, "✕"));
+  wrap.style.position="relative"; wrap.appendChild(p);
+  setTimeout(function(){document.addEventListener("click",function(){p.remove();},{once:true});},50);
 }
-function ctxMenu(msg,bub,isMe){
-  document.querySelectorAll(".ctx").forEach(e=>e.remove());
-  const menu=D({class:"ctx",style:{position:"fixed",zIndex:200,background:C.panel,border:"1px solid "+C.border,borderRadius:"12px",overflow:"hidden",boxShadow:"0 4px 24px rgba(0,0,0,.6)",minWidth:"170px"}});
-  const r=bub.getBoundingClientRect();
-  menu.style.top=Math.min(r.bottom+4,window.innerHeight-240)+"px";
-  menu.style[isMe?"right":"left"]=isMe?(window.innerWidth-r.right)+"px":r.left+"px";
-  const items=[
-    ["↩️ Reply",()=>{S.replyTo=msg;render();}],
-    ["📋 Copy",()=>navigator.clipboard.writeText(msg.text||"")],
-    ["⭐ Star",()=>{}],
-    ...(isMe?[["🗑️ Delete for me",()=>delMsg(msg.id,false)],["🗑️ Delete for everyone",()=>delMsg(msg.id,true)]]:[[],[]].slice(0,0)),
+
+function ctxMenu(msg, bub, isMe, cid) {
+  document.querySelectorAll(".ctx").forEach(function(e){e.remove();});
+  const menu = D({class:"ctx",style:{position:"fixed",zIndex:300,background:C.panel,border:"1px solid "+C.border,borderRadius:"14px",overflow:"hidden",boxShadow:"0 6px 32px rgba(0,0,0,.65)",minWidth:"200px"}});
+  const r = bub.getBoundingClientRect();
+  menu.style.top = Math.min(r.bottom+6, window.innerHeight-260)+"px";
+  menu.style[isMe?"right":"left"] = isMe?(window.innerWidth-r.right+4)+"px":(r.left+4)+"px";
+  var items = [
+    ["↩️  Reply",function(){S.replyTo=msg;render();}],
+    ["😊  React",function(){rxPicker(msg,bub.parentElement&&bub.parentElement.parentElement,isMe,cid);}],
+    ["📋  Copy Text",function(){navigator.clipboard&&navigator.clipboard.writeText(msg.text||"");}],
+    ["⭐  Star",function(){}],
+    ["🔁  Forward",function(){}],
   ];
-  for(const[label,fn]of items){const item=D({style:{padding:"11px 16px",color:label.includes("Delete")?C.red:C.text,fontSize:"14px",cursor:"pointer",borderBottom:"1px solid "+C.border+"20"},onClick(){fn();menu.remove();}},label);menu.appendChild(item);}
-  menu.appendChild(D({style:{padding:"9px 16px",color:C.muted,fontSize:"13px",cursor:"pointer"},onClick:()=>menu.remove()},"Cancel"));
+  if (isMe) items = items.concat([["🗑️  Delete for me",function(){delMsg(cid,msg.id,false).then(function(){render();});}],["🗑️  Delete for everyone",function(){delMsg(cid,msg.id,true).then(function(){render();});}]]);
+  items.forEach(function(item) {
+    const it = D({style:{padding:"12px 18px",color:item[0].includes("Delete")?C.red:C.text,fontSize:"14px",cursor:"pointer",borderBottom:"1px solid "+C.border+"20"},onClick:function(){item[1]();menu.remove();}}, item[0]);
+    it.addEventListener("mouseenter",function(){it.style.background=C.border+"40";});
+    it.addEventListener("mouseleave",function(){it.style.background="transparent";});
+    menu.appendChild(it);
+  });
+  menu.appendChild(D({style:{padding:"10px 18px",color:C.muted,fontSize:"13px",cursor:"pointer"},onClick:function(){menu.remove();}}, "Cancel"));
   document.body.appendChild(menu);
-  setTimeout(()=>document.addEventListener("click",()=>menu.remove(),{once:true}),10);
+  setTimeout(function(){document.addEventListener("click",function(){menu.remove();},{once:true});},50);
 }
 
-/* ── Main render ── */
-function render(){
-  const root=document.getElementById("app");root.innerHTML="";
-  if(S.loading){root.appendChild(D({style:{height:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent,fontSize:"48px"}},"💬"));return;}
-  if(!S.gps){root.appendChild(screenGPS());return;}
-  if(!S.user){root.appendChild(screenLogin());return;}
-  if(S.call){root.appendChild(screenCall());return;}
-  const layout=D({style:{height:"100vh",display:"flex",overflow:"hidden"}});
-  const showSide=!S.mobile||!S.activeChat,showChat=!S.mobile||!!S.activeChat;
-  if(showSide){const sw=D({style:{width:S.mobile?"100%":"360px",flexShrink:0,height:"100%"}});sw.appendChild(buildSidebar());layout.appendChild(sw);}
-  if(showChat)layout.appendChild(buildChat());
-  root.appendChild(layout);
+/* ═══════════ MAIN RENDER ═══════════ */
+function render() {
+  A.innerHTML = "";
+  if (!S.gps) { A.appendChild(screenGPS()); return; }
+  if (!S.user) { A.appendChild(screenLogin()); return; }
+  if (S.call)  { A.appendChild(screenCall()); return; }
+  const layout = D({style:{height:"100vh",display:"flex",overflow:"hidden"}});
+  const showSide = !S.mobile || !S.activeChat;
+  const showChat = !S.mobile || !!S.activeChat;
+  if (showSide) {
+    const sw = D({style:{width:S.mobile?"100%":"360px",flexShrink:0,height:"100%"}});
+    sw.appendChild(buildSidebar()); layout.appendChild(sw);
+  }
+  if (showChat) layout.appendChild(buildChat());
+  A.appendChild(layout);
 }
 
-/* ── Boot ── */
+/* ═══════════ BOOT ═══════════ */
 render();
-onAuthStateChanged(auth,async u=>{
-  S.loading=false;
-  if(u){S.user=u;subChats(u.uid);subContacts(u.uid);subStatuses();}
-  else{S.user=null;S.chats=[];S.contacts=[];S.messages=[];S.activeChat=null;}
+
+auth.onAuthStateChanged(function(u) {
+  if (u) {
+    S.user = u;
+    subChats(u.uid); subContacts(u.uid); subStatuses(); goOnline();
+  } else {
+    S.user = null; S.chats=[]; S.contacts=[]; S.messages=[]; S.activeChat=null;
+  }
   render();
 });
-window.addEventListener("resize",()=>{S.mobile=window.innerWidth<768;render();});
-window.addEventListener("beforeunload",()=>{if(S.user)setOnline(S.user.uid,"offline");});
-navigator.geolocation?.watchPosition(pos=>{if(!S.gps)return;S.gps={lat:pos.coords.latitude,lng:pos.coords.longitude};if(S.user)setOnline(S.user.uid,"online");render();},null,{enableHighAccuracy:true});
+
+window.addEventListener("resize", function(){S.mobile=window.innerWidth<768;render();});
+window.addEventListener("beforeunload", goOffline);
+window.addEventListener("visibilitychange", function(){document.hidden?goOffline():goOnline();});
+
+navigator.geolocation && navigator.geolocation.watchPosition(
+  function(pos) {
+    S.gps = {lat:pos.coords.latitude, lng:pos.coords.longitude};
+    if (S.user) db.collection("users").doc(S.user.uid).update({gps:S.gps, lastSeen:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(){});
+    render();
+  },
+  null,
+  {enableHighAccuracy:true, maximumAge:10000}
+);
+
 </script>
 </body>
 </html>
