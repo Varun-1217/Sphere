@@ -1143,7 +1143,17 @@ function buildChat(){
   var other=S.contacts.find(function(c){return c.uid===oUid;});
   var cName=chat.isGroup?chat.name:((other&&(other.name||other.email))||"Unknown");
   var online=other&&other.status==="online";
-  var win=D({id:"chatWrap",style:{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}});
+var win=D({
+  id:"chatWrap",
+  style:{
+    flex:1,
+    display:"flex",
+    flexDirection:"column",
+    position:"relative",
+    minHeight:0,
+    overflow:"hidden"
+  }
+});
 
   // Header
   var hdr=D({style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 16px",background:C.panel,borderBottom:"1px solid "+C.border,flexShrink:0}});
@@ -1345,8 +1355,27 @@ window.addEventListener("visibilitychange",function(){document.hidden?goOffline(
 
 // FIX: prevent swipe navigation (causes logout on mobile)
 document.addEventListener("touchstart",function(){},{passive:true});
-window.history.pushState(null,"",window.location.href);
-window.addEventListener("popstate",function(){window.history.pushState(null,"",window.location.href);});
+window.history.pushState({screen:"home"},"");
+
+window.addEventListener("popstate",function(e){
+
+  if(S.activeChat){
+
+    S.activeChat=null;
+    S.messages=[];
+
+    if(S.unsubMsg){
+      S.unsubMsg();
+      S.unsubMsg=null;
+    }
+
+    render();
+
+    window.history.pushState({screen:"home"},"");
+    return;
+  }
+
+});
 
 // Live GPS updates
 navigator.geolocation&&navigator.geolocation.watchPosition(
