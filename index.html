@@ -48,7 +48,7 @@ audio{accent-color:#25d366;max-width:100%}
 /* Prevent tap highlight flashing */
 button{-webkit-tap-highlight-color:transparent;tap-highlight-color:transparent}
 /* FIXES chat disappearing: stable chat layout */
-#chatLayout{display:flex;height:100vh;overflow:hidden}
+#chatLayout{display:flex;height:100dvh;height:calc(var(--vh, 1vh) * 100);overflow:hidden}
 #sidebarWrap{flex-shrink:0;height:100%}
 #chatWrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 </style>
@@ -1374,5 +1374,27 @@ navigator.geolocation&&navigator.geolocation.watchPosition(
   {enableHighAccuracy:true,maximumAge:10000}
 );
 </script>
+
+<script>
+function updateViewportHeight(){
+  document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+}
+updateViewportHeight();
+window.addEventListener('resize', updateViewportHeight);
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', function () {
+    updateViewportHeight();
+    var inputBar = document.getElementById('inputBar');
+    if (inputBar) {
+      setTimeout(function(){
+        inputBar.scrollIntoView({block:'nearest'});
+      }, 50);
+    }
+  });
+}
+</script>
+
 </body>
 </html>
+
