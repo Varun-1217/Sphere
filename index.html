@@ -512,12 +512,12 @@ function buildInputBar(cid) {
     }},"📎");
 
   var iWrap=D({style:{flex:1,background:C.card,borderRadius:"24px",padding:"10px 16px",display:"flex",alignItems:"center"}});
-  var txti=In({id:"txti",placeholder:"Type a message",style:{background:"none",border:"none",color:C.text,fontSize:"14px",width:"100%",outline:"none"}});
+  var txti=Tx({id:"txti",placeholder:"Type a message",rows:"1",style:{background:"none",border:"none",color:C.text,fontSize:"14px",width:"100%",outline:"none",resize:"none",maxHeight:"120px",overflowY:"auto",lineHeight:"1.4",WebkitAppearance:"none",fontFamily:"inherit",display:"block"}});
 
   var sendB=Bt({id:"sendBtn",style:{width:"46px",height:"46px",borderRadius:"50%",border:"none",background:C.card,fontSize:"20px",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .2s",flexShrink:0,cursor:"pointer"},
     onClick:function(){
       var v=txti.value.trim();
-      if(v){txti.value="";sendB.style.background=C.card;sendB.textContent="🎙";sendMsg({text:v});}
+      if(v){txti.value="";txti.style.height="auto";sendB.style.background=C.card;sendB.textContent="🎙";sendMsg({text:v});}
       else if(!S.recording)startRec();
     }},"🎙");
 
@@ -525,10 +525,12 @@ function buildInputBar(cid) {
     if(e.key==="Enter"&&!e.shiftKey){
       e.preventDefault();
       var v=txti.value.trim();
-      if(v){txti.value="";sendB.style.background=C.card;sendB.textContent="🎙";sendMsg({text:v});}
+      if(v){txti.value="";txti.style.height="auto";sendB.style.background=C.card;sendB.textContent="🎙";sendMsg({text:v});}
     }
   });
   txti.addEventListener("input",function(){
+    txti.style.height="auto";
+    txti.style.height=Math.min(txti.scrollHeight,120)+"px";
     var v=txti.value.trim();
     sendB.style.background=v?C.accent:C.card;
     sendB.textContent=v?"➤":"🎙";
