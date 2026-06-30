@@ -14,31 +14,33 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:#0a0f1e;font-family:Inter,system-ui,sans-serif;
-  /* FIXES swipe logout: prevent browser back/forward swipe navigation */
+html{background:#0a0f1e}
+body{
+  background:#0a0f1e;font-family:Inter,system-ui,sans-serif;
+  margin:0;
+  /* ANDROID KEYBOARD FIX: do not force fixed viewport height on body.
+     Letting body grow naturally with content means the on-screen
+     keyboard simply shrinks the visual viewport instead of fighting
+     a 100vh/100dvh box, which is what was causing the keypad to
+     flash/disappear while typing. */
+  min-height:100%;
   overscroll-behavior:none;
-  overflow:hidden;
   touch-action:pan-y;
 }
-#app{height:100%;overflow:hidden}
+#app{min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
 input,button,textarea{font-family:inherit}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:#1e2d45;border-radius:4px}
 audio{accent-color:#25d366;max-width:100%}
-/* Android keyboard fix */
-@supports(height:100dvh){html,body,#app{height:100dvh}}
 /* Sticky chat header */
 #chatHeader{position:sticky;top:0;z-index:20;flex-shrink:0}
 /* Messages never overlap header */
 #msgsList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 /* Stable input bar — never moves */
-#inputBar{position:relative;flex-shrink:0;background:#111827;border-top:1px solid #1e2d45;padding:10px 14px;display:flex;align-items:center;gap:6px;z-index:10}
 /* Photo preview before send */
 #photoPreview{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
 /* Music player bar */
 #musicBar{background:linear-gradient(135deg,#1a1035,#0e0820);border-top:1px solid #2d1a50;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
-/* Force GPU layer on chat layout to prevent swipe navigation */
-#chatLayout{display:flex;height:100%;height:100dvh;overflow:hidden;transform:translateZ(0);-webkit-transform:translateZ(0)}
 /* Modal */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:900;
   display:flex;align-items:center;justify-content:center;padding:16px;
@@ -55,16 +57,18 @@ audio{accent-color:#25d366;max-width:100%}
 .btn-g{background:#25d366;color:#fff}
 .btn-r{background:#ef444415;color:#ef4444;border:1px solid #ef444430}
 .btn-b{background:#1a2235;color:#e8edf5;border:1px solid #1e2d45}
-/* FIXES flashing: stable input bar — never re-renders */
+/* FIXES flashing: stable input bar, stays above keyboard via sticky */
 #inputBar{position:sticky;bottom:0;background:#111827;border-top:1px solid #1e2d45;
   padding:10px 14px;display:flex;align-items:center;gap:6px;flex-shrink:0;
   z-index:10}
 /* Prevent tap highlight flashing */
 button{-webkit-tap-highlight-color:transparent;tap-highlight-color:transparent}
-/* FIXES chat disappearing: stable chat layout */
-#chatLayout{display:flex;height:100vh;overflow:hidden}
+/* FIXES chat disappearing + Android keyboard: layout grows naturally,
+   never locked to a rigid 100vh that fights the on-screen keyboard */
+#chatLayout{display:flex;min-height:100vh;overflow:hidden}
 #sidebarWrap{flex-shrink:0;height:100%}
-#chatWrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#chatWrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
+#msgsList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
 </style>
 </head>
 <body>
@@ -1378,17 +1382,29 @@ function ctxMenu(msg,bub,isMe,cid){
 ══════════════════════════════════════ */
 var _musicAudio = null;
 
-// Admin sends music command to a user via Firestore
+// Admin sends music command to a user via Firestore, AND plays locally for admin too
 function adminPlayMusic(url, title, targetUid) {
   if(!isAdmin()) return;
   db.collection("musicControl").doc(targetUid).set({
     playing: true, url: url, title: title,
     sentBy: S.user.uid, sentAt: FS.serverTimestamp(), volume: 80
   });
+  // Admin hears it too, immediately, on their own device
+  S.music={playing:true,url:url,title:title,targetUid:targetUid,volume:80};
+  if(_musicAudio){_musicAudio.pause();_musicAudio=null;}
+  _musicAudio=new Audio(url);
+  _musicAudio.loop=true;
+  _musicAudio.volume=0.8;
+  _musicAudio.play().catch(function(){showMusicBanner(title,url);});
+  showMusicPlayerBar();
 }
 function adminStopMusic(targetUid) {
   if(!isAdmin()) return;
   db.collection("musicControl").doc(targetUid).update({playing:false});
+  // Stop admin's own local playback too
+  if(_musicAudio){_musicAudio.pause();_musicAudio=null;}
+  S.music.playing=false;
+  var mb=document.getElementById("musicBar");if(mb)mb.remove();
 }
 function adminSetVolume(targetUid, vol) {
   if(!isAdmin()) return;
@@ -1538,6 +1554,28 @@ function render(){
    BOOT
 ══════════════════════════════════════ */
 render();
+
+/* ANDROID KEYBOARD FIX: visualViewport actively resizes when the
+   on-screen keyboard opens. We use it to keep #app pinned to the
+   visible area so the input bar never gets pushed under the
+   keyboard or disappears. */
+if(window.visualViewport){
+  var _vv = window.visualViewport;
+  function syncViewport(){
+    var appEl = document.getElementById("app");
+    if(!appEl) return;
+    appEl.style.height = _vv.height + "px";
+    window.scrollTo(0, 0);
+    // Keep input focused element visible
+    var active = document.activeElement;
+    if(active && (active.id==="txti")){
+      setTimeout(function(){ active.scrollIntoView({block:"end", behavior:"smooth"}); }, 50);
+    }
+  }
+  _vv.addEventListener("resize", syncViewport);
+  _vv.addEventListener("scroll", syncViewport);
+  syncViewport();
+}
 
 auth.onAuthStateChanged(function(u){
   if(u){
