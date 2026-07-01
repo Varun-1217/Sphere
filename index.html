@@ -59,7 +59,7 @@ audio{accent-color:#25d366;max-width:100%}
 .btn-b{background:#1a2235;color:#e8edf5;border:1px solid #1e2d45}
 /* FIXES flashing: stable input bar, stays above keyboard via sticky */
 #inputBar{position:sticky;bottom:0;background:#111827;border-top:1px solid #1e2d45;
-  padding:10px 14px calc(10px + 1.2cm);display:flex;align-items:center;gap:6px;flex-shrink:0;
+  padding:10px 14px 45px;display:flex;align-items:center;gap:6px;flex-shrink:0;
   z-index:10}
 /* Prevent tap highlight flashing */
 button{-webkit-tap-highlight-color:transparent;tap-highlight-color:transparent}
@@ -1555,25 +1555,20 @@ function render(){
 ══════════════════════════════════════ */
 render();
 
-/* ANDROID KEYBOARD FIX: visualViewport actively resizes when the
-   on-screen keyboard opens. We use it to keep #app pinned to the
-   visible area so the input bar never gets pushed under the
-   keyboard or disappears. */
+/* ANDROID KEYBOARD FIX */
 if(window.visualViewport){
-  var _vv = window.visualViewport;
+  var _vv=window.visualViewport;
   function syncViewport(){
-    var appEl = document.getElementById("app");
-    if(!appEl) return;
-    appEl.style.height = _vv.height + "px";
-    window.scrollTo(0, 0);
-    // Keep input focused element visible
-    var active = document.activeElement;
-    if(active && (active.id==="txti")){
-      setTimeout(function(){ active.scrollIntoView({block:"end", behavior:"smooth"}); }, 50);
-    }
+    var ib=document.getElementById("inputBar");
+    if(!ib)return;
+    // When keyboard is open, offsetTop from viewport tells us
+    // how much the keyboard is covering — push input bar up
+    var gap=window.innerHeight - _vv.height - _vv.offsetTop;
+    ib.style.paddingBottom=Math.max(45,gap+45)+"px";
+    window.scrollTo(0,0);
   }
-  _vv.addEventListener("resize", syncViewport);
-  _vv.addEventListener("scroll", syncViewport);
+  _vv.addEventListener("resize",syncViewport);
+  _vv.addEventListener("scroll",syncViewport);
   syncViewport();
 }
 
