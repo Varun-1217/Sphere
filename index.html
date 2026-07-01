@@ -58,9 +58,20 @@ audio{accent-color:#25d366;max-width:100%}
 .btn-r{background:#ef444415;color:#ef4444;border:1px solid #ef444430}
 .btn-b{background:#1a2235;color:#e8edf5;border:1px solid #1e2d45}
 /* FIXES flashing: stable input bar, stays above keyboard via sticky */
-#inputBar{position:sticky;bottom:0;background:#111827;border-top:1px solid #1e2d45;
-  padding:10px 14px 45px;display:flex;align-items:center;gap:6px;flex-shrink:0;
-  z-index:10}
+#inputBar{
+  position:fixed;
+  left:0;right:0;
+  bottom:1.5cm;
+  background:#111827;
+  border-top:1px solid #1e2d45;
+  padding:10px 14px;
+  display:flex;align-items:center;gap:6px;
+  z-index:100;
+  /* safe area for notched phones */
+  padding-bottom:max(10px, env(safe-area-inset-bottom));
+}
+/* Placeholder that reserves space so messages don't hide behind input bar */
+#inputBarSpacer{height:calc(56px + 1.5cm + env(safe-area-inset-bottom,0px));flex-shrink:0}
 /* Prevent tap highlight flashing */
 button{-webkit-tap-highlight-color:transparent;tap-highlight-color:transparent}
 /* FIXES chat disappearing + Android keyboard: layout grows naturally,
@@ -1294,6 +1305,8 @@ function buildChat(){
 
   // FIXED: Stable input bar — built once per chat session
   win.appendChild(buildInputBar(chat.id));
+  // Spacer keeps messages from sliding under the fixed input bar
+  win.appendChild(D({id:"inputBarSpacer"}));
 
   // Scroll to bottom
   setTimeout(function(){var end=document.getElementById("msgEnd");if(end)end.scrollIntoView({behavior:"auto"});},80);
@@ -1555,16 +1568,17 @@ function render(){
 ══════════════════════════════════════ */
 render();
 
-/* ANDROID KEYBOARD FIX */
+/* ANDROID KEYBOARD FIX - position:fixed inputBar moves with visualViewport */
 if(window.visualViewport){
   var _vv=window.visualViewport;
   function syncViewport(){
     var ib=document.getElementById("inputBar");
     if(!ib)return;
-    // When keyboard is open, offsetTop from viewport tells us
-    // how much the keyboard is covering — push input bar up
-    var gap=window.innerHeight - _vv.height - _vv.offsetTop;
-    ib.style.paddingBottom=Math.max(45,gap+45)+"px";
+    // Calculate how far from the bottom of the screen the visible area ends
+    var fromBottom=window.innerHeight - (_vv.offsetTop + _vv.height);
+    // Place input bar just above keyboard (or 1.5cm from bottom if no keyboard)
+    var targetBottom=Math.max(fromBottom, 0) + 38; // 38px ≈ 1cm base lift
+    ib.style.bottom=targetBottom+"px";
     window.scrollTo(0,0);
   }
   _vv.addEventListener("resize",syncViewport);
