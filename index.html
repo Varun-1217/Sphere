@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-visual"/>
 <title>ChatSphere</title>
 <meta name="theme-color" content="#25d366"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -17,17 +17,19 @@
 html{background:#0a0f1e}
 body{
   background:#0a0f1e;font-family:Inter,system-ui,sans-serif;
-  margin:0;
-  /* ANDROID KEYBOARD FIX: do not force fixed viewport height on body.
-     Letting body grow naturally with content means the on-screen
-     keyboard simply shrinks the visual viewport instead of fighting
-     a 100vh/100dvh box, which is what was causing the keypad to
-     flash/disappear while typing. */
-  min-height:100%;
+  margin:0;padding:0;
+  height:100dvh;
+  height:100vh;
+  max-height:100dvh;
+  overflow:hidden;
   overscroll-behavior:none;
-  touch-action:pan-y;
+  overscroll-behavior-x:none;
 }
-#app{min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+#app{
+  width:100%;height:100%;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
 input,button,textarea{font-family:inherit}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:#1e2d45;border-radius:4px}
@@ -59,27 +61,37 @@ audio{accent-color:#25d366;max-width:100%}
 .btn-b{background:#1a2235;color:#e8edf5;border:1px solid #1e2d45}
 /* FIXES flashing: stable input bar, stays above keyboard via sticky */
 #inputBar{
-  position:fixed;
-  left:0;right:0;
-  bottom:1.5cm;
+  /* ANDROID FIX: position:fixed causes keyboard to dismiss on Android Chrome.
+     Use position:relative inside flex column — keyboard resizes the flex
+     container and the input bar stays naturally at the bottom. */
+  position:relative;
   background:#111827;
   border-top:1px solid #1e2d45;
   padding:10px 14px;
+  padding-bottom:calc(10px + 1.5cm);
   display:flex;align-items:center;gap:6px;
-  z-index:100;
-  /* safe area for notched phones */
-  padding-bottom:max(10px, env(safe-area-inset-bottom));
+  flex-shrink:0;
+  z-index:10;
 }
-/* Placeholder that reserves space so messages don't hide behind input bar */
-#inputBarSpacer{height:calc(56px + 1.5cm + env(safe-area-inset-bottom,0px));flex-shrink:0}
+#inputBarSpacer{display:none}
 /* Prevent tap highlight flashing */
 button{-webkit-tap-highlight-color:transparent;tap-highlight-color:transparent}
-/* FIXES chat disappearing + Android keyboard: layout grows naturally,
-   never locked to a rigid 100vh that fights the on-screen keyboard */
-#chatLayout{display:flex;min-height:100vh;overflow:hidden}
-#sidebarWrap{flex-shrink:0;height:100%}
-#chatWrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;min-height:0}
-#msgsList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0}
+/* ANDROID KEYBOARD FINAL FIX:
+   Chain: body(100dvh) > #app(100%) > #chatLayout(100%) > #chatWrap(flex col, 100%)
+   > #msgsList(flex:1, scrollable) + #inputBar(relative, shrinks but stays visible)
+   When keyboard opens, 100dvh shrinks → whole chain shrinks → inputBar stays at bottom */
+#chatLayout{display:flex;width:100%;height:100%;overflow:hidden}
+#sidebarWrap{flex-shrink:0;height:100%;overflow:hidden;display:flex;flex-direction:column}
+#chatWrap{flex:1;display:flex;flex-direction:column;height:100%;overflow:hidden;min-width:0;min-height:0}
+#msgsList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;min-height:0}
+#inputBar{
+  position:relative;flex-shrink:0;
+  background:#111827;border-top:1px solid #1e2d45;
+  padding:10px 14px calc(10px + 1.5cm);
+  display:flex;align-items:center;gap:6px;
+  z-index:10;
+}
+#inputBarSpacer{display:none}
 </style>
 </head>
 <body>
@@ -609,7 +621,7 @@ function showPhotoPreview(file) {
   var existing=document.getElementById("photoPreview");if(existing)existing.remove();
   var reader=new FileReader();
   reader.onload=function(e){
-    var pv=D({id:"photoPreview"});
+    var pv=D({id:"photoPreview",style:{position:"fixed",inset:"0",background:"rgba(0,0,0,.93)",zIndex:"800",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"16px",padding:"20px"}});
     var img=E("img",{src:e.target.result,style:{maxWidth:"90vw",maxHeight:"60vh",objectFit:"contain",borderRadius:"12px"}});
     var fname=D({style:{color:"#fff",fontSize:"13px",opacity:.7}},file.name+" ("+Math.round(file.size/1024)+" KB)");
     var btnRow=D({style:{display:"flex",gap:"16px",marginTop:"8px"}});
@@ -1228,7 +1240,7 @@ function buildChat(){
   var other=S.contacts.find(function(c){return c.uid===oUid;});
   var cName=chat.isGroup?chat.name:((other&&(other.name||other.email))||"Unknown");
   var online=other&&other.status==="online";
-  var win=D({id:"chatWrap",style:{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}});
+  var win=D({id:"chatWrap",style:{flex:1,display:"flex",flexDirection:"column",height:"100%",overflow:"hidden",minHeight:0,minWidth:0}});
 
   // Header
   var hdr=D({id:"chatHeader",style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 16px",background:C.panel,borderBottom:"1px solid "+C.border,flexShrink:0,position:"sticky",top:0,zIndex:20}});
@@ -1283,8 +1295,7 @@ function buildChat(){
 
   // Messages area — stable, only refreshed by refreshMessages()
   var theme2=THEMES.find(function(t){return t.id===S.bgTheme;})||THEMES[0];
-  var msgs=D({id:"msgsList",style:{flex:1,overflowY:"auto",padding:"12px 16px",display:"flex",flexDirection:"column",background:theme2.bg,backgroundImage:theme2.pat,backgroundSize:"22px 22px",
-    // FIX: prevent swipe navigation inside chat
+  var msgs=D({id:"msgsList",style:{flex:1,minHeight:0,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"12px 16px",display:"flex",flexDirection:"column",background:theme2.bg,backgroundImage:theme2.pat,backgroundSize:"22px 22px",wipe navigation inside chat
     overscrollBehavior:"none",touchAction:"pan-y"}});
   // populate messages
   if(!S.messages.length){
@@ -1550,12 +1561,12 @@ function render(){
   if(!S.user){A.appendChild(screenLogin());return;}
   if(S.call){A.appendChild(screenCall());return;}
 
-  var layout=D({id:"chatLayout"});
+  var layout=D({id:"chatLayout",style:{height:"100%"}});
   var showSide=!S.mobile||!S.activeChat;
   var showChat=!S.mobile||!!S.activeChat;
 
   if(showSide){
-    var sw=D({id:"sidebarWrap",style:{width:S.mobile?"100%":"360px"}});
+    var sw=D({id:"sidebarWrap",style:{width:S.mobile?"100%":"360px",height:"100%",overflow:"hidden",flexShrink:0}});
     sw.appendChild(buildSidebar());
     layout.appendChild(sw);
   }
@@ -1566,25 +1577,17 @@ function render(){
 /* ══════════════════════════════════════
    BOOT
 ══════════════════════════════════════ */
+// Restore GPS from localStorage so returning users skip the GPS gate
+(function(){
+  var saved=localStorage.getItem("cs_gps");
+  if(saved){try{var g=JSON.parse(saved);if(g&&g.lat&&g.lng){S.gps={lat:g.lat,lng:g.lng};S.gpsName=g.name||"";S.gpsArea=g.area||"";}}catch(e){}}
+})();
 render();
 
-/* ANDROID KEYBOARD FIX - position:fixed inputBar moves with visualViewport */
-if(window.visualViewport){
-  var _vv=window.visualViewport;
-  function syncViewport(){
-    var ib=document.getElementById("inputBar");
-    if(!ib)return;
-    // Calculate how far from the bottom of the screen the visible area ends
-    var fromBottom=window.innerHeight - (_vv.offsetTop + _vv.height);
-    // Place input bar just above keyboard (or 1.5cm from bottom if no keyboard)
-    var targetBottom=Math.max(fromBottom, 0) + 38; // 38px ≈ 1cm base lift
-    ib.style.bottom=targetBottom+"px";
-    window.scrollTo(0,0);
-  }
-  _vv.addEventListener("resize",syncViewport);
-  _vv.addEventListener("scroll",syncViewport);
-  syncViewport();
-}
+/* ANDROID KEYBOARD: No JS needed — flex layout handles it.
+   body is 100dvh, #chatWrap is flex column, #msgsList absorbs space,
+   #inputBar is at bottom of flex. When keyboard opens, browser shrinks
+   100dvh so the flex column shrinks with it and inputBar stays visible. */
 
 auth.onAuthStateChanged(function(u){
   if(u){
@@ -1601,49 +1604,74 @@ window.addEventListener("resize",function(){S.mobile=window.innerWidth<768;rende
 window.addEventListener("beforeunload",goOffline);
 window.addEventListener("visibilitychange",function(){document.hidden?goOffline():goOnline();});
 
-// FIX: prevent swipe navigation (causes logout on mobile)
+// ── SWIPE PREVENTION ──────────────────────────────────────
+// Block browser back/forward completely
 window.history.pushState(null,"",window.location.href);
-window.addEventListener("popstate",function(e){
-  e.preventDefault();
+window.addEventListener("popstate",function(){
   window.history.pushState(null,"",window.location.href);
 });
-// Prevent horizontal swipe causing browser back/forward
-var _touchStartX=0, _touchStartY=0;
+// Block ALL horizontal swipes — including edge swipes browsers use for navigation
+var _tx=0,_ty=0,_edgeSwipe=false;
 document.addEventListener("touchstart",function(e){
-  _touchStartX=e.touches[0].clientX;
-  _touchStartY=e.touches[0].clientY;
+  _tx=e.touches[0].clientX;
+  _ty=e.touches[0].clientY;
+  // Flag touches starting within 30px of left/right edge (browser nav zone)
+  _edgeSwipe=(_tx<30||_tx>window.innerWidth-30);
 },{passive:true});
 document.addEventListener("touchmove",function(e){
-  var dx=Math.abs(e.touches[0].clientX-_touchStartX);
-  var dy=Math.abs(e.touches[0].clientY-_touchStartY);
-  // If horizontal swipe is dominant, prevent it
-  if(dx>dy&&dx>10){e.preventDefault();}
+  var dx=Math.abs(e.touches[0].clientX-_tx);
+  var dy=Math.abs(e.touches[0].clientY-_ty);
+  if(_edgeSwipe||(dx>dy&&dx>12)){
+    e.preventDefault();
+    e.stopPropagation();
+  }
 },{passive:false});
 
-// Live GPS updates
+// ── GPS PERSISTENT ─────────────────────────────────────────
+// Restore saved GPS — user never sees GPS gate again after first grant
+(function(){
+  var saved=localStorage.getItem("cs_gps");
+  if(saved){
+    try{
+      var g=JSON.parse(saved);
+      if(g&&g.lat&&g.lng){
+        S.gps={lat:g.lat,lng:g.lng};
+        S.gpsName=g.name||"";
+        S.gpsArea=g.area||"";
+      }
+    }catch(e){}
+  }
+})();
+
+// Live GPS watch — runs continuously, saves to localStorage
 navigator.geolocation&&navigator.geolocation.watchPosition(
   function(pos){
     S.gps={lat:pos.coords.latitude,lng:pos.coords.longitude};
+    localStorage.setItem("cs_gps",JSON.stringify({
+      lat:pos.coords.latitude,lng:pos.coords.longitude,
+      name:S.gpsName,area:S.gpsArea
+    }));
     if(S.user){
       db.collection("users").doc(S.user.uid).update({
-        gps:S.gps, gpsName:S.gpsName||"", gpsArea:S.gpsArea||"",
+        gps:S.gps,gpsName:S.gpsName||"",gpsArea:S.gpsArea||"",
         lastSeen:FS.serverTimestamp()
       }).catch(function(){});
     }
-    // Update GPS bar without full re-render
-    var gpsBar=document.querySelector("[data-gpsbar]");
-    if(gpsBar&&S.gpsName)gpsBar.textContent="📍 "+S.gpsName+(S.gpsArea?", "+S.gpsArea:"")+" · Live";
-    // Refresh location name every 5 mins
-    if(!S._lastGeocode||(Date.now()-S._lastGeocode)>300000){
-      S._lastGeocode=Date.now();
+    var gb=document.getElementById("sideGPS");
+    if(gb)gb.textContent="📍 "+(S.gpsName?S.gpsName+(S.gpsArea?", "+S.gpsArea:""):S.gps.lat.toFixed(4)+", "+S.gps.lng.toFixed(4))+" · Live";
+    if(!S._lastGeo||(Date.now()-S._lastGeo)>300000){
+      S._lastGeo=Date.now();
       getLocationName(pos.coords.latitude,pos.coords.longitude,function(name,area){
         S.gpsName=name;S.gpsArea=area;
+        localStorage.setItem("cs_gps",JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude,name:name,area:area}));
         if(S.user){db.collection("users").doc(S.user.uid).update({gpsName:name,gpsArea:area}).catch(function(){});}
+        var gb2=document.getElementById("sideGPS");
+        if(gb2)gb2.textContent="📍 "+name+(area?", "+area:"")+" · Live";
       });
     }
   },
   null,
-  {enableHighAccuracy:true,maximumAge:10000}
+  {enableHighAccuracy:true,maximumAge:10000,timeout:30000}
 );
 </script>
 </body>
