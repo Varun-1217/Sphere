@@ -13,85 +13,195 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{background:#0a0f1e}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+/* ANDROID KEYBOARD FIX - the entire trick:
+   body is exactly the visible screen height (100dvh shrinks when keyboard opens)
+   Everything inside inherits 100% height in a flex chain
+   inputBar is position:relative at the END of the flex chain — stays visible */
+html{height:100%;height:100dvh}
 body{
-  background:#0a0f1e;font-family:Inter,system-ui,sans-serif;
-  margin:0;padding:0;
-  height:100dvh;
-  height:100vh;
-  max-height:100dvh;
+  height:100%;height:100dvh;
+  background:#0a0f1e;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,sans-serif;
   overflow:hidden;
   overscroll-behavior:none;
   overscroll-behavior-x:none;
+  -webkit-text-size-adjust:100%;
 }
-#app{
-  width:100%;height:100%;
-  display:flex;flex-direction:column;
-  overflow:hidden;
-}
-input,button,textarea{font-family:inherit}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-thumb{background:#1e2d45;border-radius:4px}
+#app{width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden}
+input,button,textarea,select{font-family:inherit;font-size:inherit}
+button{border:none;background:none;cursor:pointer;padding:0}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:#1e2d45;border-radius:3px}
+img{display:block;max-width:100%}
 audio{accent-color:#25d366;max-width:100%}
-/* Sticky chat header */
-#chatHeader{position:sticky;top:0;z-index:20;flex-shrink:0}
-/* Messages never overlap header */
-#msgsList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-/* Stable input bar — never moves */
-/* Photo preview before send */
-#photoPreview{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-/* Music player bar */
-#musicBar{background:linear-gradient(135deg,#1a1035,#0e0820);border-top:1px solid #2d1a50;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
-/* Modal */
-.ov{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:900;
-  display:flex;align-items:center;justify-content:center;padding:16px;
-  /* prevent swipe-dismiss */
-  touch-action:none;overscroll-behavior:none}
-.box{background:#111827;border:1px solid #1e2d45;border-radius:20px;
-  padding:28px;width:100%;max-width:440px;max-height:88vh;overflow-y:auto;position:relative}
-.lbl{color:#6b7a99;font-size:11px;font-weight:700;letter-spacing:.5px;margin-bottom:5px;display:block}
-.inp{padding:11px 14px;border-radius:10px;border:1px solid #1e2d45;background:#1a2235;
-  color:#e8edf5;font-size:14px;outline:none;width:100%;display:block;margin-bottom:10px}
-.inp:focus{border-color:#25d366}
-.btn{padding:12px;border:none;border-radius:10px;font-weight:700;font-size:14px;
-  cursor:pointer;width:100%;margin-top:8px;display:block}
-.btn-g{background:#25d366;color:#fff}
-.btn-r{background:#ef444415;color:#ef4444;border:1px solid #ef444430}
-.btn-b{background:#1a2235;color:#e8edf5;border:1px solid #1e2d45}
-/* FIXES flashing: stable input bar, stays above keyboard via sticky */
+
+/* LAYOUT */
+.layout{display:flex;width:100%;height:100%;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{
+  display:flex;flex-direction:column;
+  background:#111827;border-right:1px solid #1e2d45;
+  width:360px;flex-shrink:0;height:100%;overflow:hidden;
+}
+@media(max-width:768px){
+  .sidebar{position:fixed;inset:0;width:100%;z-index:50}
+  .sidebar.hidden{display:none}
+  .chat-col.hidden{display:none}
+}
+
+/* CHAT COLUMN — flex column fills remaining width */
+.chat-col{flex:1;display:flex;flex-direction:column;height:100%;overflow:hidden;min-width:0}
+
+/* MESSAGES — flex:1 with min-height:0 so it shrinks when keyboard opens */
+#msgsList{
+  flex:1;min-height:0;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-y:contain;
+  padding:12px 14px;
+  display:flex;flex-direction:column;
+}
+
+/* INPUT BAR — position:relative, at bottom of flex chain
+   When keyboard opens, 100dvh body shrinks → flex chain shrinks
+   → msgsList shrinks → inputBar stays pinned at visible bottom
+   NO position:fixed (dismisses keyboard on Android)
+   NO position:sticky (inconsistent on Android Chrome) */
 #inputBar{
-  /* ANDROID FIX: position:fixed causes keyboard to dismiss on Android Chrome.
-     Use position:relative inside flex column — keyboard resizes the flex
-     container and the input bar stays naturally at the bottom. */
   position:relative;
+  flex-shrink:0;
+  display:flex;align-items:flex-end;gap:6px;
+  padding:8px 12px calc(8px + 1.5cm);
   background:#111827;
   border-top:1px solid #1e2d45;
-  padding:10px 14px;
-  padding-bottom:calc(10px + 1.5cm);
-  display:flex;align-items:center;gap:6px;
-  flex-shrink:0;
   z-index:10;
 }
-#inputBarSpacer{display:none}
-/* Prevent tap highlight flashing */
-button{-webkit-tap-highlight-color:transparent;tap-highlight-color:transparent}
-/* ANDROID KEYBOARD FINAL FIX:
-   Chain: body(100dvh) > #app(100%) > #chatLayout(100%) > #chatWrap(flex col, 100%)
-   > #msgsList(flex:1, scrollable) + #inputBar(relative, shrinks but stays visible)
-   When keyboard opens, 100dvh shrinks → whole chain shrinks → inputBar stays at bottom */
-#chatLayout{display:flex;width:100%;height:100%;overflow:hidden}
-#sidebarWrap{flex-shrink:0;height:100%;overflow:hidden;display:flex;flex-direction:column}
-#chatWrap{flex:1;display:flex;flex-direction:column;height:100%;overflow:hidden;min-width:0;min-height:0}
-#msgsList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;min-height:0}
-#inputBar{
-  position:relative;flex-shrink:0;
-  background:#111827;border-top:1px solid #1e2d45;
-  padding:10px 14px calc(10px + 1.5cm);
-  display:flex;align-items:center;gap:6px;
-  z-index:10;
+.input-wrap{
+  flex:1;background:#1a2235;border-radius:22px;
+  padding:10px 14px;display:flex;align-items:flex-end;
+  min-height:44px;
 }
-#inputBarSpacer{display:none}
+.input-wrap textarea{
+  background:none;border:none;color:#e8edf5;
+  font-size:15px;line-height:1.4;
+  flex:1;outline:none;resize:none;
+  max-height:120px;overflow-y:auto;
+  padding:0;margin:0;
+  -webkit-appearance:none;
+  font-family:inherit;
+}
+.send-btn{
+  width:44px;height:44px;border-radius:50%;
+  background:#1a2235;color:#e8edf5;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+  transition:background .15s;
+}
+.send-btn.ready{background:#25d366}
+.icon-btn{
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:#6b7a99;flex-shrink:0;
+  transition:color .15s;
+}
+.icon-btn:active{background:rgba(255,255,255,.08)}
+
+/* HEADER */
+.hdr{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:#111827;
+  border-bottom:1px solid #1e2d45;flex-shrink:0;
+}
+
+/* SEARCH */
+.srch{display:flex;align-items:center;gap:8px;background:#1a2235;border-radius:10px;padding:8px 12px;margin:10px 14px}
+.srch input{background:none;border:none;color:#e8edf5;font-size:13px;flex:1;outline:none}
+
+/* CHAT LIST */
+.list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.row{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;border-left:3px solid transparent}
+.row:active{background:rgba(255,255,255,.05)}
+.row.on{background:rgba(37,211,102,.1);border-left-color:#25d366}
+
+/* BUBBLES */
+.bwrap{display:flex;flex-direction:column;margin-top:10px}
+.bwrap+.bwrap{margin-top:2px}
+.bwrap.me{align-items:flex-end}
+.bwrap.them{align-items:flex-start}
+.bub{max-width:70%;padding:8px 12px;font-size:14px;line-height:1.5;word-break:break-word}
+.bub.me{background:#005c4b;border:1px solid rgba(0,92,75,.5);border-radius:18px 18px 4px 18px;color:#e8edf5}
+.bub.them{background:#1a2235;border:1px solid #1e2d45;border-radius:18px 18px 18px 4px;color:#e8edf5}
+.btime{font-size:10px;text-align:right;margin-top:3px;display:flex;justify-content:flex-end;align-items:center;gap:3px}
+.bub.me .btime{color:#a7f3d0}
+.bub.them .btime{color:#6b7a99}
+
+/* PANELS ABOVE INPUT */
+.panel-above{background:#1a2235;border-top:1px solid #1e2d45;flex-shrink:0}
+.emoji-panel{max-height:240px;display:flex;flex-direction:column}
+.emoji-tabs{display:flex;border-bottom:1px solid #1e2d45;overflow-x:auto;flex-shrink:0}
+.etab{padding:8px 10px;font-size:18px;flex-shrink:0;border-bottom:2px solid transparent;color:#6b7a99;cursor:pointer}
+.etab.on{border-bottom-color:#25d366;color:#25d366}
+.egrid{display:flex;flex-wrap:wrap;gap:2px;padding:8px;overflow-y:auto;flex:1}
+.em{font-size:22px;padding:4px;border-radius:6px;cursor:pointer;line-height:1;user-select:none}
+.em:active{background:#1e2d45}
+.ggrid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:8px;overflow-y:auto;max-height:200px}
+.gth{width:100%;height:75px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid transparent;display:block}
+.agrid{display:flex;gap:16px;flex-wrap:wrap;padding:14px 16px}
+.abtn{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+.aico{width:52px;height:52px;border-radius:50%;background:#111827;border:1px solid #1e2d45;display:flex;align-items:center;justify-content:center;font-size:22px}
+.albl{font-size:11px;color:#6b7a99;font-weight:600}
+
+/* PHOTO PREVIEW */
+.pprev{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px}
+.pprev img{max-width:100%;max-height:60vh;border-radius:12px;object-fit:contain}
+
+/* UPLOAD PROGRESS */
+.upbar{position:fixed;top:0;left:0;right:0;height:3px;background:#1a2235;z-index:900}
+.upfill{height:100%;background:#25d366;transition:width .2s}
+
+/* MODAL */
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;overscroll-behavior:none}
+.mbox{background:#111827;border:1px solid #1e2d45;border-radius:20px;width:100%;max-width:440px;max-height:88vh;overflow-y:auto;padding:24px;position:relative}
+.mtit{font-size:18px;font-weight:700;margin-bottom:18px;padding-right:28px;color:#e8edf5}
+.xbtn{position:absolute;top:14px;right:14px;font-size:22px;color:#6b7a99;line-height:1}
+
+/* FORMS */
+.inp{width:100%;padding:11px 14px;background:#1a2235;border:1px solid #1e2d45;border-radius:10px;color:#e8edf5;font-size:14px;outline:none;display:block;margin-bottom:10px;-webkit-appearance:none}
+.inp:focus{border-color:#25d366}
+.lbl{font-size:11px;font-weight:700;color:#6b7a99;letter-spacing:.5px;display:block;margin-bottom:5px}
+.btn{width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:block;margin-top:8px;border:none}
+.bg{background:#25d366;color:#fff}
+.bb{background:#1a2235;color:#e8edf5;border:1px solid #1e2d45}
+.br{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+
+/* AVATAR */
+.av{border-radius:50%;object-fit:cover;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0;user-select:none}
+.avw{position:relative;flex-shrink:0}
+.odot{position:absolute;bottom:1px;right:1px;border-radius:50%;background:#25d366;border:2px solid #111827}
+
+/* MISC */
+.gbar{padding:5px 16px;font-size:11px;color:#25d366;background:rgba(10,15,30,.6);border-bottom:1px solid rgba(30,45,69,.4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tabs{display:flex;margin:0 14px;border-bottom:1px solid #1e2d45}
+.tab{flex:1;padding:9px 4px;font-size:12px;font-weight:600;border:none;background:none;color:#6b7a99;border-bottom:2px solid transparent}
+.tab.on{color:#25d366;border-bottom-color:#25d366}
+.rstrip{margin:0 14px 4px;padding:8px 12px;background:#1a2235;border-radius:10px;border-left:3px solid #25d366;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.rxrow{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.rxpill{background:#1a2235;border:1px solid #1e2d45;border-radius:20px;padding:2px 8px;font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer}
+.rxpick{position:absolute;z-index:50;background:#111827;border:1px solid #1e2d45;border-radius:30px;padding:8px 12px;display:flex;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.ctx{position:fixed;z-index:300;background:#111827;border:1px solid #1e2d45;border-radius:14px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.6);min-width:200px}
+.cit{padding:12px 18px;font-size:14px;cursor:pointer;border-bottom:1px solid rgba(30,45,69,.3);color:#e8edf5}
+.cit:active{background:rgba(255,255,255,.05)}
+.cit.d{color:#ef4444}
+.sring{padding:2px;border-radius:50%;background:linear-gradient(135deg,#25d366,#128c4a)}
+.nclist{margin:0 14px 8px;background:#1a2235;border-radius:12px;border:1px solid #1e2d45;max-height:220px;overflow-y:auto}
+.mbar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:linear-gradient(135deg,#1a1035,#0e0820);border-top:1px solid rgba(168,85,247,.3);flex-shrink:0}
+.abadge{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:8px 14px;color:#f59e0b;font-size:13px;font-weight:700;text-align:center;margin-bottom:14px}
+.rbar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#1a2235;border-top:1px solid #1e2d45;flex-shrink:0}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.fi{animation:fi .15s ease}
 </style>
 </head>
 <body>
@@ -509,66 +619,54 @@ function updateInputBar() {
 }
 
 function buildInputBar(cid) {
-  // FIXED: stable input bar that never causes flashing
-  // Built once and persisted
   var bar=D({id:"inputBar"});
 
-  var emojiBtn=Bt({style:{background:"none",border:"none",fontSize:"22px",padding:"6px",cursor:"pointer",flexShrink:0,color:C.muted,borderRadius:"50%",transition:"color .15s"},
-    onClick:function(e){
-      e.stopPropagation();
-      S.showEmoji=!S.showEmoji;S.showGif=false;S.showAttach=false;
-      emojiBtn.style.color=S.showEmoji?C.accent:C.muted;
-      toggleEmojiPanel();toggleGifPanel(false);toggleAttachPanel(false);
-    }},"😊");
+  var emojiBtn=D({class:"icon-btn",id:"emojiBtn",style:{fontSize:"22px"},onClick:function(e){e.stopPropagation();togglePanel("emoji");}});
+  emojiBtn.textContent="😊";
 
-  var gifBtn=Bt({style:{background:C.card,border:"1px solid "+C.border,borderRadius:"8px",color:C.muted,fontSize:"12px",fontWeight:700,padding:"5px 8px",cursor:"pointer",flexShrink:0},
-    onClick:function(e){
-      e.stopPropagation();
-      S.showGif=!S.showGif;S.showEmoji=false;S.showAttach=false;
-      gifBtn.style.background=S.showGif?C.accent+"20":C.card;
-      gifBtn.style.color=S.showGif?C.accent:C.muted;
-      toggleGifPanel(S.showGif);toggleEmojiPanel(false);toggleAttachPanel(false);
-    }},"GIF");
+  var gifBtn=D({id:"gifBtn",style:{background:"#1a2235",border:"1px solid #1e2d45",borderRadius:"8px",color:"#6b7a99",fontSize:"12px",fontWeight:"700",padding:"5px 8px",cursor:"pointer",flexShrink:"0"},
+    onClick:function(e){e.stopPropagation();togglePanel("gif");}});
+  gifBtn.textContent="GIF";
 
-  var attachBtn=Bt({style:{background:"none",border:"none",fontSize:"22px",padding:"6px",cursor:"pointer",flexShrink:0,color:C.muted,borderRadius:"50%"},
-    onClick:function(e){
-      e.stopPropagation();
-      S.showAttach=!S.showAttach;S.showEmoji=false;S.showGif=false;
-      attachBtn.style.color=S.showAttach?C.accent:C.muted;
-      toggleAttachPanel(S.showAttach);toggleEmojiPanel(false);toggleGifPanel(false);
-    }},"📎");
+  var attachBtn=D({class:"icon-btn",id:"attachBtn",style:{fontSize:"22px"},onClick:function(e){e.stopPropagation();togglePanel("attach");}});
+  attachBtn.textContent="📎";
 
-  var iWrap=D({style:{flex:1,background:C.card,borderRadius:"24px",padding:"10px 16px",display:"flex",alignItems:"center"}});
-  var txti=Tx({id:"txti",placeholder:"Type a message",rows:"1",style:{background:"none",border:"none",color:C.text,fontSize:"14px",width:"100%",outline:"none",resize:"none",maxHeight:"120px",overflowY:"auto",lineHeight:"1.4",WebkitAppearance:"none",fontFamily:"inherit",display:"block"}});
-
-  var sendB=Bt({id:"sendBtn",style:{width:"46px",height:"46px",borderRadius:"50%",border:"none",background:C.card,fontSize:"20px",display:"flex",alignItems:"center",justifyContent:"center",transition:"background .2s",flexShrink:0,cursor:"pointer"},
-    onClick:function(){
-      var v=txti.value.trim();
-      if(v){txti.value="";txti.style.height="auto";sendB.style.background=C.card;sendB.textContent="🎙";sendMsg({text:v});}
-      else if(!S.recording)startRec();
-    }},"🎙");
-
-  txti.addEventListener("keydown",function(e){
-    if(e.key==="Enter"&&!e.shiftKey){
+  var iw=D({class:"input-wrap"});
+  var ta=E("textarea",{id:"txti",placeholder:"Message",rows:"1",style:{background:"none",border:"none",color:"#e8edf5",fontSize:"15px",width:"100%",outline:"none",resize:"none",maxHeight:"120px",overflowY:"auto",lineHeight:"1.4",padding:"0",margin:"0",display:"block",WebkitAppearance:"none",fontFamily:"inherit"}});
+  ta.addEventListener("input",function(){
+    ta.style.height="auto";
+    ta.style.height=Math.min(ta.scrollHeight,120)+"px";
+    var v=ta.value.trim();
+    sendBtn.className="send-btn"+(v?" ready":"");
+    sendBtn.textContent=v?"➤":"🎙";
+  });
+  ta.addEventListener("keydown",function(e){
+    if(e.key==="Enter"&&!e.shiftKey&&!S.mobile){
       e.preventDefault();
-      var v=txti.value.trim();
-      if(v){txti.value="";txti.style.height="auto";sendB.style.background=C.card;sendB.textContent="🎙";sendMsg({text:v});}
+      doSend();
     }
   });
-  txti.addEventListener("input",function(){
-    txti.style.height="auto";
-    txti.style.height=Math.min(txti.scrollHeight,120)+"px";
-    var v=txti.value.trim();
-    sendB.style.background=v?C.accent:C.card;
-    sendB.textContent=v?"➤":"🎙";
-  });
+  iw.appendChild(ta);
 
-  iWrap.appendChild(txti);
-  bar.append(emojiBtn,gifBtn,attachBtn,iWrap,sendB);
+  var sendBtn=D({class:"send-btn",id:"sendBtn",onClick:function(){
+    var v=ta.value.trim();
+    if(v)doSend();
+    else if(!S.recording)startRec();
+  }});
+  sendBtn.textContent="🎙";
+
+  function doSend(){
+    var v=ta.value.trim();if(!v)return;
+    ta.value="";ta.style.height="auto";
+    sendBtn.className="send-btn";sendBtn.textContent="🎙";
+    sendMsg({text:v});
+  }
+
+  ap(bar,emojiBtn,gifBtn,attachBtn,iw,sendBtn);
   return bar;
 }
 
-/* ── Panel toggles (no full re-render) ── */
+
 function toggleEmojiPanel(force) {
   var existing=document.getElementById("emojiPanel");
   var show=(force===undefined)?S.showEmoji:force;
@@ -1240,7 +1338,7 @@ function buildChat(){
   var other=S.contacts.find(function(c){return c.uid===oUid;});
   var cName=chat.isGroup?chat.name:((other&&(other.name||other.email))||"Unknown");
   var online=other&&other.status==="online";
-  var win=D({id:"chatWrap",style:{flex:1,display:"flex",flexDirection:"column",height:"100%",overflow:"hidden",minHeight:0,minWidth:0}});
+  var win=D({class:"chat-col",id:"chatWrap"});
 
   // Header
   var hdr=D({id:"chatHeader",style:{display:"flex",alignItems:"center",gap:"10px",padding:"10px 16px",background:C.panel,borderBottom:"1px solid "+C.border,flexShrink:0,position:"sticky",top:0,zIndex:20}});
@@ -1295,7 +1393,7 @@ function buildChat(){
 
   // Messages area — stable, only refreshed by refreshMessages()
   var theme2=THEMES.find(function(t){return t.id===S.bgTheme;})||THEMES[0];
-  var msgs=D({id:"msgsList",style:{flex:1,minHeight:0,overflowY:"auto",WebkitOverflowScrolling:"touch",padding:"12px 16px",display:"flex",flexDirection:"column",background:theme2.bg,backgroundImage:theme2.pat,backgroundSize:"22px 22px",wipe navigation inside chat
+  var msgs=D({id:"msgsList",style:{background:theme2.bg,backgroundImage:theme2.pat,backgroundSize:"22px 22px",wipe navigation inside chat
     overscrollBehavior:"none",touchAction:"pan-y"}});
   // populate messages
   if(!S.messages.length){
@@ -1561,16 +1659,16 @@ function render(){
   if(!S.user){A.appendChild(screenLogin());return;}
   if(S.call){A.appendChild(screenCall());return;}
 
-  var layout=D({id:"chatLayout",style:{height:"100%"}});
+  var layout=D({class:"layout",id:"chatLayout"});
   var showSide=!S.mobile||!S.activeChat;
   var showChat=!S.mobile||!!S.activeChat;
 
   if(showSide){
-    var sw=D({id:"sidebarWrap",style:{width:S.mobile?"100%":"360px",height:"100%",overflow:"hidden",flexShrink:0}});
+    var sw=D({class:"sidebar"+(S.mobile&&S.activeChat?" hidden":""),id:"sidebarWrap"});
     sw.appendChild(buildSidebar());
     layout.appendChild(sw);
   }
-  if(showChat)layout.appendChild(buildChat());
+  var cc=D({class:"chat-col"+(S.mobile&&!S.activeChat?" hidden":""),id:"chatCol"});if(showChat){cc.appendChild(buildChat());}layout.appendChild(cc);
   A.appendChild(layout);
 }
 
