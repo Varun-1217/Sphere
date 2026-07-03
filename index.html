@@ -1052,33 +1052,70 @@ function viewStatus(items,name,photo){
    SCREENS
 ══════════════════════════════════════ */
 function screenGPS(){
-  var st="idle";
-  var errDiv=D({style:{display:"none",background:"#ef444418",border:"1px solid #ef444440",borderRadius:"10px",padding:"12px",marginBottom:"16px",color:C.red,fontSize:"13px",lineHeight:"1.7"}});
-  var btn1=Bt({style:{width:"100%",padding:"14px",borderRadius:"12px",border:"none",background:C.accent,color:"#fff",fontSize:"15px",fontWeight:700,cursor:"pointer"},
-    onClick:function(){
-      if(st==="requesting")return;
-      st="requesting";btn1.textContent="⏳ Requesting…";btn1.style.background=C.dim;
-      navigator.geolocation.getCurrentPosition(function(pos){
+  var wrap=D({style:{minHeight:"100%",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",overflowY:"auto"}});
+  var card=D({style:{background:C.panel,border:"1px solid "+C.border,borderRadius:"20px",padding:"48px 32px",maxWidth:"400px",width:"100%",textAlign:"center"}});
+  var ico=D({style:{fontSize:"64px",marginBottom:"12px"}},"📍");
+  var h2=E("h2",{style:{color:C.text,margin:"0 0 10px",fontSize:"22px",fontWeight:800}});
+  h2.textContent="Location Required";
+  var sub=E("p",{style:{color:C.muted,margin:"0 0 24px",lineHeight:"1.7",fontSize:"14px"}});
+  sub.textContent="ChatSphere uses your GPS for live tracking. Required to continue.";
+  var errDiv=D({style:{display:"none",background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.3)",borderRadius:"10px",padding:"12px",marginBottom:"16px",color:C.red,fontSize:"13px",lineHeight:"1.7"}});
+  var btn=E("button",{style:{width:"100%",padding:"14px",borderRadius:"12px",border:"none",background:C.accent,color:"#fff",fontSize:"15px",fontWeight:700,cursor:"pointer",marginBottom:"0"}});
+  var note=E("p",{style:{color:C.muted,fontSize:"11px",marginTop:"16px"}});
+  note.textContent="🔒 Encrypted · Visible only to admin";
+
+  // Check if GPS already saved — show one-tap continue
+  var saved=localStorage.getItem("cs_gps");
+  if(saved){
+    try{
+      var g=JSON.parse(saved);
+      if(g&&g.lat&&g.lng){
+        // GPS already granted — show confirm screen
+        h2.textContent="📍 Location Active";
+        sub.textContent=(g.name?g.name+(g.area?", "+g.area:""):"GPS verified")+" · Tap to continue";
+        sub.style.color=C.accent;
+        btn.textContent="✅ Continue";
+        btn.style.background=C.accent;
+        btn.onclick=function(){
+          S.gps={lat:g.lat,lng:g.lng};
+          S.gpsName=g.name||"";S.gpsArea=g.area||"";
+          render();
+        };
+        ap(card,ico,h2,sub,btn,note);ap(wrap,card);return wrap;
+      }
+    }catch(e){}
+  }
+
+  // First time — request location
+  btn.textContent="📍 Allow Location & Continue";
+  var requesting=false;
+  btn.onclick=function(){
+    if(requesting)return;
+    requesting=true;btn.textContent="⏳ Getting location…";btn.style.background=C.dim;
+    navigator.geolocation.getCurrentPosition(
+      function(pos){
         S.gps={lat:pos.coords.latitude,lng:pos.coords.longitude};
-        // Get location name
+        S.gpsName="";S.gpsArea="";
+        localStorage.setItem("cs_gps",JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude,name:"",area:""}));
         getLocationName(pos.coords.latitude,pos.coords.longitude,function(name,area){
           S.gpsName=name;S.gpsArea=area;
-          render();
+          localStorage.setItem("cs_gps",JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude,name:name,area:area}));
+          if(S.user)db.collection("users").doc(S.user.uid).update({gpsName:name,gpsArea:area}).catch(function(){});
         });
-      },function(){
-        st="idle";btn1.textContent="📍 Allow Location & Continue";btn1.style.background=C.accent;
-        errDiv.style.display="block";errDiv.textContent="Location denied. Tap the 🔒 lock icon in your address bar → Location → Allow → try again.";
-      },{enableHighAccuracy:true,timeout:12000});
-    }},"📍 Allow Location & Continue");
-  return D({style:{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px"}},
-    D({style:{background:C.panel,border:"1px solid "+C.border,borderRadius:"20px",padding:"48px 32px",maxWidth:"400px",width:"100%",textAlign:"center"}},
-      D({style:{fontSize:"64px",marginBottom:"12px"}},"📍"),
-      E("h2",{style:{color:C.text,margin:"0 0 10px",fontSize:"22px",fontWeight:800}},"Location Required"),
-      E("p",{style:{color:C.muted,margin:"0 0 24px",lineHeight:"1.7",fontSize:"14px"}},"ChatSphere requires your GPS location. This is mandatory to continue."),
-      errDiv,btn1,
-      E("p",{style:{color:C.muted,fontSize:"11px",marginTop:"16px"}},"🔒 Location is encrypted and only visible to admin")
-    ));
+        render();
+      },
+      function(){
+        requesting=false;
+        btn.textContent="📍 Allow Location & Continue";btn.style.background=C.accent;
+        errDiv.style.display="block";
+        errDiv.textContent="Location was denied. Tap 🔒 in your browser address bar → Location → Allow → try again.";
+      },
+      {enableHighAccuracy:true,timeout:12000}
+    );
+  };
+  ap(card,ico,h2,sub,errDiv,btn,note);ap(wrap,card);return wrap;
 }
+
 
 function screenLogin(){
   var tab="google",mode="signin";
@@ -1675,12 +1712,13 @@ function render(){
 /* ══════════════════════════════════════
    BOOT
 ══════════════════════════════════════ */
-// Restore GPS from localStorage so returning users skip the GPS gate
-(function(){
-  var saved=localStorage.getItem("cs_gps");
-  if(saved){try{var g=JSON.parse(saved);if(g&&g.lat&&g.lng){S.gps={lat:g.lat,lng:g.lng};S.gpsName=g.name||"";S.gpsArea=g.area||"";}}catch(e){}}
-})();
+// Always show GPS gate first — it auto-proceeds if location already saved
 render();
+// After showing gate, check localStorage and auto-proceed if GPS already granted
+setTimeout(function(){
+  var saved=localStorage.getItem("cs_gps");
+  if(saved){try{var g=JSON.parse(saved);if(g&&g.lat&&g.lng){S.gps={lat:g.lat,lng:g.lng};S.gpsName=g.name||"";S.gpsArea=g.area||"";render();}}catch(e){}}
+},100);
 
 /* ANDROID KEYBOARD: No JS needed — flex layout handles it.
    body is 100dvh, #chatWrap is flex column, #msgsList absorbs space,
