@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-visual"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"/>
 <title>ChatSphere</title>
 <meta name="theme-color" content="#25d366"/>
 <meta name="mobile-web-app-capable" content="yes"/>
@@ -14,19 +14,22 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{background:#0a0f1e}
 body{
   background:#0a0f1e;font-family:Inter,system-ui,sans-serif;
   margin:0;padding:0;
-  height:100dvh;
-  height:100vh;
-  max-height:100dvh;
+  /* ANDROID KEYBOARD: height:100% lets body shrink when keyboard opens
+     interactive-widget=resizes-content in viewport meta makes this work */
+  height:100%;
   overflow:hidden;
   overscroll-behavior:none;
   overscroll-behavior-x:none;
 }
+html{height:100%}
 #app{
-  width:100%;height:100%;
+  width:100%;
+  /* Use 100dvh on #app — this IS the element that needs to be screen-height */
+  height:100dvh;
+  height:100vh;
   display:flex;flex-direction:column;
   overflow:hidden;
 }
@@ -37,7 +40,7 @@ audio{accent-color:#25d366;max-width:100%}
 /* Sticky chat header */
 #chatHeader{position:sticky;top:0;z-index:20;flex-shrink:0}
 /* Messages never overlap header */
-#msgsList{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#msgsList{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
 /* Stable input bar — never moves */
 /* Photo preview before send */
 #photoPreview{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
